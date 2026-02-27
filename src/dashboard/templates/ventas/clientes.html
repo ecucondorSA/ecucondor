@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+
+{% block title %}Clientes{% endblock %}
+{% block header_title %}Catalogo de Clientes{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Acciones -->
+    <div class="flex justify-between items-center">
+        <div class="flex space-x-2">
+            <button onclick="document.getElementById('modal-nuevo').classList.remove('hidden')"
+                    class="bg-ecu-blue text-white px-4 py-2 rounded hover:bg-blue-700 transition flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Nuevo Cliente
+            </button>
+        </div>
+
+        <!-- Busqueda -->
+        <form method="get" class="flex space-x-2">
+            <input type="text" name="q" value="{{ query|default('') }}" placeholder="Buscar por RUC o nombre..."
+                   class="border rounded px-3 py-2 text-sm w-64">
+            <button type="submit" class="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300 transition">Buscar</button>
+        </form>
+    </div>
+
+    <!-- Tabla de clientes -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Identificacion</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Razon Social</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Telefono</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Ventas</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Facturas</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for cliente in clientes %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3">
+                        <div class="text-sm font-mono text-gray-900">{{ cliente.identificacion }}</div>
+                        <div class="text-xs text-gray-500">{{ {'04':'RUC','05':'Cedula','06':'Pasaporte','07':'Consumidor Final'}.get(cliente.tipo_identificacion, cliente.tipo_identificacion) }}</div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="text-sm font-medium text-gray-900">{{ cliente.razon_social[:50] }}{% if cliente.razon_social|length > 50 %}...{% endif %}</div>
+                        {% if cliente.nombre_comercial %}
+                        <div class="text-xs text-gray-500">{{ cliente.nombre_comercial[:40] }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-600">{{ cliente.email or '-' }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">{{ cliente.telefono or '-' }}</td>
+                    <td class="px-4 py-3 text-right text-sm font-medium text-gray-900">${{ '{:,.2f}'.format(cliente.total_ventas|default(0)) }}</td>
+                    <td class="px-4 py-3 text-center text-sm text-gray-600">{{ cliente.total_facturas|default(0) }}</td>
+                    <td class="px-4 py-3 text-center">
+                        {% if cliente.activo %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Activo</span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">Inactivo</span>
+                        {% endif %}
+                        {% if cliente.requiere_resu %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800 ml-1" title="Requiere RESU por superar umbral UAFE">RESU</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <button onclick="editarCliente('{{ cliente.id }}')" class="text-ecu-blue hover:underline text-sm mr-2">Editar</button>
+                        {% if cliente.activo %}
+                        <button onclick="desactivarCliente('{{ cliente.id }}')" class="text-red-600 hover:underline text-sm">Desactivar</button>
+                        {% else %}
+                        <button onclick="activarCliente('{{ cliente.id }}')" class="text-green-600 hover:underline text-sm">Activar</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                        <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <p>No hay clientes registrados</p>
+                        <p class="text-sm mt-2">Haga clic en "Nuevo Cliente" para agregar uno</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Estadisticas rapidas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Total Clientes</p>
+            <p class="text-2xl font-bold text-gray-900">{{ stats.total|default(clientes|length) }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Clientes Activos</p>
+            <p class="text-2xl font-bold text-green-600">{{ stats.activos|default(clientes|selectattr('activo')|list|length) }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Con Ventas</p>
+            <p class="text-2xl font-bold text-blue-600">{{ stats.con_ventas|default(0) }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Requieren RESU</p>
+            <p class="text-2xl font-bold text-purple-600">{{ stats.requieren_resu|default(0) }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nuevo Cliente -->
+<div id="modal-nuevo" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800" id="modal-titulo">Nuevo Cliente</h3>
+                <button onclick="cerrarModal()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <form id="form-cliente" class="p-6 space-y-4">
+            <input type="hidden" name="cliente_id" id="cliente_id">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo ID</label>
+                    <select name="tipo_identificacion" id="tipo_identificacion" class="w-full border rounded px-3 py-2">
+                        <option value="04">RUC</option>
+                        <option value="05">Cedula</option>
+                        <option value="06">Pasaporte</option>
+                        <option value="07">Consumidor Final</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Identificacion *</label>
+                    <div class="flex space-x-2">
+                        <input type="text" name="identificacion" id="identificacion" required
+                               class="flex-1 border rounded px-3 py-2" placeholder="1790016919001">
+                        <button type="button" onclick="validarRUC()"
+                                class="bg-gray-200 px-3 py-2 rounded hover:bg-gray-300 text-sm" title="Validar con SRI">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <p id="validacion-ruc" class="text-xs mt-1 hidden"></p>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Razon Social *</label>
+                <input type="text" name="razon_social" id="razon_social" required class="w-full border rounded px-3 py-2">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Comercial</label>
+                <input type="text" name="nombre_comercial" id="nombre_comercial" class="w-full border rounded px-3 py-2">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" name="email" id="email" class="w-full border rounded px-3 py-2" placeholder="cliente@ejemplo.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
+                    <input type="text" name="telefono" id="telefono" class="w-full border rounded px-3 py-2" placeholder="0991234567">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Direccion</label>
+                <textarea name="direccion" id="direccion" rows="2" class="w-full border rounded px-3 py-2" placeholder="Direccion del cliente"></textarea>
+            </div>
+            <div class="flex justify-end space-x-2 pt-4 border-t">
+                <button type="button" onclick="cerrarModal()"
+                        class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                <button type="submit" class="px-4 py-2 bg-ecu-blue text-white rounded hover:bg-blue-700">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Editar Cliente -->
+<div id="modal-editar" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800">Editar Cliente</h3>
+                <button onclick="document.getElementById('modal-editar').classList.add('hidden')" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <form id="form-editar" class="p-6 space-y-4">
+            <input type="hidden" name="edit_cliente_id" id="edit_cliente_id">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo ID</label>
+                    <input type="text" id="edit_tipo_identificacion" class="w-full border rounded px-3 py-2 bg-gray-100" readonly>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Identificacion</label>
+                    <input type="text" id="edit_identificacion" class="w-full border rounded px-3 py-2 bg-gray-100" readonly>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Razon Social *</label>
+                <input type="text" name="edit_razon_social" id="edit_razon_social" required class="w-full border rounded px-3 py-2">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Comercial</label>
+                <input type="text" name="edit_nombre_comercial" id="edit_nombre_comercial" class="w-full border rounded px-3 py-2">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" name="edit_email" id="edit_email" class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
+                    <input type="text" name="edit_telefono" id="edit_telefono" class="w-full border rounded px-3 py-2">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Direccion</label>
+                <textarea name="edit_direccion" id="edit_direccion" rows="2" class="w-full border rounded px-3 py-2"></textarea>
+            </div>
+            <div class="flex justify-end space-x-2 pt-4 border-t">
+                <button type="button" onclick="document.getElementById('modal-editar').classList.add('hidden')"
+                        class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                <button type="submit" class="px-4 py-2 bg-ecu-blue text-white rounded hover:bg-blue-700">Actualizar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Crear cliente
+document.getElementById('form-cliente').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const data = {
+        tipo_identificacion: form.tipo_identificacion.value,
+        identificacion: form.identificacion.value,
+        razon_social: form.razon_social.value,
+        nombre_comercial: form.nombre_comercial.value || null,
+        email: form.email.value || null,
+        telefono: form.telefono.value || null,
+        direccion: form.direccion.value || null
+    };
+
+    try {
+        const resp = await fetch('/api/v1/clientes', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        if (resp.ok) {
+            window.location.reload();
+        } else {
+            const err = await resp.json();
+            alert('Error: ' + (err.detail || 'No se pudo guardar'));
+        }
+    } catch (err) {
+        alert('Error de conexion');
+    }
+});
+
+// Editar cliente
+document.getElementById('form-editar').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const clienteId = document.getElementById('edit_cliente_id').value;
+    const data = {
+        razon_social: document.getElementById('edit_razon_social').value,
+        nombre_comercial: document.getElementById('edit_nombre_comercial').value || null,
+        email: document.getElementById('edit_email').value || null,
+        telefono: document.getElementById('edit_telefono').value || null,
+        direccion: document.getElementById('edit_direccion').value || null
+    };
+
+    try {
+        const resp = await fetch(`/api/v1/clientes/${clienteId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        if (resp.ok) {
+            window.location.reload();
+        } else {
+            const err = await resp.json();
+            alert('Error: ' + (err.detail || 'No se pudo actualizar'));
+        }
+    } catch (err) {
+        alert('Error de conexion');
+    }
+});
+
+async function editarCliente(id) {
+    try {
+        const resp = await fetch(`/api/v1/clientes/${id}`);
+        if (!resp.ok) throw new Error('No se pudo cargar el cliente');
+        const cliente = await resp.json();
+
+        document.getElementById('edit_cliente_id').value = cliente.id;
+        document.getElementById('edit_tipo_identificacion').value =
+            {'04':'RUC','05':'Cedula','06':'Pasaporte','07':'Consumidor Final'}[cliente.tipo_identificacion] || cliente.tipo_identificacion;
+        document.getElementById('edit_identificacion').value = cliente.identificacion;
+        document.getElementById('edit_razon_social').value = cliente.razon_social;
+        document.getElementById('edit_nombre_comercial').value = cliente.nombre_comercial || '';
+        document.getElementById('edit_email').value = cliente.email || '';
+        document.getElementById('edit_telefono').value = cliente.telefono || '';
+        document.getElementById('edit_direccion').value = cliente.direccion || '';
+
+        document.getElementById('modal-editar').classList.remove('hidden');
+    } catch (err) {
+        alert('Error cargando cliente: ' + err.message);
+    }
+}
+
+async function desactivarCliente(id) {
+    if (!confirm('Desea desactivar este cliente?')) return;
+    try {
+        const resp = await fetch(`/api/v1/clientes/${id}`, {
+            method: 'DELETE'
+        });
+        if (resp.ok) {
+            window.location.reload();
+        } else {
+            const err = await resp.json();
+            alert('Error: ' + (err.detail || 'No se pudo desactivar'));
+        }
+    } catch (err) {
+        alert('Error de conexion');
+    }
+}
+
+async function activarCliente(id) {
+    try {
+        const resp = await fetch(`/api/v1/clientes/${id}/activar`, {
+            method: 'POST'
+        });
+        if (resp.ok) {
+            window.location.reload();
+        } else {
+            const err = await resp.json();
+            alert('Error: ' + (err.detail || 'No se pudo activar'));
+        }
+    } catch (err) {
+        alert('Error de conexion');
+    }
+}
+
+async function validarRUC() {
+    const identificacion = document.getElementById('identificacion').value;
+    const tipoId = document.getElementById('tipo_identificacion').value;
+    const msgEl = document.getElementById('validacion-ruc');
+
+    if (!identificacion) {
+        msgEl.textContent = 'Ingrese una identificacion';
+        msgEl.className = 'text-xs mt-1 text-red-600';
+        msgEl.classList.remove('hidden');
+        return;
+    }
+
+    // Solo validar con SRI si es RUC
+    if (tipoId === '04') {
+        try {
+            msgEl.textContent = 'Validando...';
+            msgEl.className = 'text-xs mt-1 text-blue-600';
+            msgEl.classList.remove('hidden');
+
+            const resp = await fetch(`/api/v1/sri/validar-ruc/${identificacion}`);
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data.valido) {
+                    msgEl.textContent = 'RUC valido: ' + (data.razon_social || 'OK');
+                    msgEl.className = 'text-xs mt-1 text-green-600';
+                    if (data.razon_social && !document.getElementById('razon_social').value) {
+                        document.getElementById('razon_social').value = data.razon_social;
+                    }
+                } else {
+                    msgEl.textContent = 'RUC no valido o no encontrado';
+                    msgEl.className = 'text-xs mt-1 text-red-600';
+                }
+            } else {
+                msgEl.textContent = 'Error validando RUC';
+                msgEl.className = 'text-xs mt-1 text-yellow-600';
+            }
+        } catch (err) {
+            msgEl.textContent = 'Error de conexion';
+            msgEl.className = 'text-xs mt-1 text-yellow-600';
+        }
+    } else {
+        // Validacion basica de longitud
+        if (tipoId === '05' && identificacion.length !== 10) {
+            msgEl.textContent = 'La cedula debe tener 10 digitos';
+            msgEl.className = 'text-xs mt-1 text-red-600';
+        } else {
+            msgEl.textContent = 'Formato correcto';
+            msgEl.className = 'text-xs mt-1 text-green-600';
+        }
+        msgEl.classList.remove('hidden');
+    }
+}
+
+function cerrarModal() {
+    document.getElementById('modal-nuevo').classList.add('hidden');
+    document.getElementById('form-cliente').reset();
+    document.getElementById('validacion-ruc').classList.add('hidden');
+}
+</script>
+{% endblock %}

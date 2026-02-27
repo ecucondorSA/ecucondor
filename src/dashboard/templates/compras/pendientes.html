@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+
+{% block title %}Facturas Pendientes{% endblock %}
+{% block header_title %}Facturas Pendientes de Revision{% endblock %}
+
+{% block head %}
+<style>
+    .modal { display: none; }
+    .modal.active { display: flex; }
+    .badge-pendiente { @apply bg-yellow-100 text-yellow-800; }
+    .badge-aprobada { @apply bg-green-100 text-green-800; }
+    .badge-rechazada { @apply bg-red-100 text-red-800; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Estadisticas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Pendientes</p>
+            <p class="text-3xl font-bold text-yellow-600">{{ stats.pendientes }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Aprobadas</p>
+            <p class="text-3xl font-bold text-green-600">{{ stats.aprobadas }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Rechazadas</p>
+            <p class="text-3xl font-bold text-red-600">{{ stats.rechazadas }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 flex items-center justify-center">
+            <a href="/dashboard/compras/importar"
+               class="bg-ecu-blue text-white px-4 py-2 rounded hover:bg-blue-700 transition flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                Importar XML
+            </a>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded">
+        <div class="flex">
+            <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            <p class="ml-3 text-sm text-red-700">{{ error }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Listado de facturas pendientes -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+            <h3 class="text-lg font-medium text-gray-900">Facturas por Revisar</h3>
+            <p class="text-sm text-gray-500">{{ total }} factura(s) pendiente(s) de aprobacion</p>
+        </div>
+
+        {% if facturas %}
+        <div class="divide-y divide-gray-200">
+            {% for f in facturas %}
+            <div class="p-4 hover:bg-gray-50" id="factura-{{ f.clave_acceso[:20] }}">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-sm font-medium text-gray-900">{{ f.numero_factura }}</span>
+                            <span class="inline-flex px-2 py-0.5 text-xs font-medium rounded badge-pendiente">Pendiente</span>
+                        </div>
+                        <p class="mt-1 text-sm text-gray-700 font-semibold">{{ f.razon_social_emisor }}</p>
+                        <p class="text-xs text-gray-500">RUC: {{ f.ruc_emisor }}</p>
+                        <p class="text-xs text-gray-500">Fecha: {{ f.fecha_emision }}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-lg font-bold text-gray-900">${{ '{:,.2f}'.format(f.total|float) }}</p>
+                        <p class="text-xs text-gray-500">Subtotal: ${{ '{:,.2f}'.format(f.subtotal|float) }}</p>
+                        <p class="text-xs text-gray-500">IVA: ${{ '{:,.2f}'.format(f.iva|float) }}</p>
+                    </div>
+                </div>
+
+                <!-- Detalle (oculto inicialmente) -->
+                <div class="mt-3 text-xs text-gray-500 hidden" id="detalle-{{ f.clave_acceso[:20] }}">
+                    <p><strong>Clave Acceso:</strong> {{ f.clave_acceso }}</p>
+                    {% if f.estado_sri %}
+                    <p><strong>Estado SRI:</strong> {{ f.estado_sri }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Acciones -->
+                <div class="mt-3 flex justify-end space-x-2">
+                    <button onclick="toggleDetalle('{{ f.clave_acceso[:20] }}')"
+                            class="text-xs text-gray-600 hover:text-gray-900 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Ver detalle
+                    </button>
+                    <button onclick="rechazarFactura('{{ f.clave_acceso }}')"
+                            class="text-xs text-red-600 hover:text-red-900 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        Rechazar
+                    </button>
+                    <button onclick="mostrarModalAprobacion('{{ f.clave_acceso }}', '{{ f.razon_social_emisor }}', '{{ f.total }}')"
+                            class="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Aprobar
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Paginacion -->
+        {% if total_pages > 1 %}
+        <div class="px-4 py-3 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+            <p class="text-sm text-gray-500">Pagina {{ page }} de {{ total_pages }}</p>
+            <div class="flex space-x-2">
+                {% if page > 1 %}
+                <a href="?page={{ page - 1 }}" class="px-3 py-1 text-sm border rounded hover:bg-gray-100">Anterior</a>
+                {% endif %}
+                {% if page < total_pages %}
+                <a href="?page={{ page + 1 }}" class="px-3 py-1 text-sm border rounded hover:bg-gray-100">Siguiente</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="p-8 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No hay facturas pendientes</h3>
+            <p class="mt-1 text-sm text-gray-500">Todas las facturas importadas han sido procesadas.</p>
+            <div class="mt-6">
+                <a href="/dashboard/compras/importar"
+                   class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-ecu-blue hover:bg-blue-700">
+                    <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Importar nuevas facturas
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de Aprobacion -->
+<div id="modal-aprobacion" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 items-center justify-center">
+    <div class="relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center pb-3 border-b">
+            <h3 class="text-lg font-medium text-gray-900">Aprobar Factura</h3>
+            <button onclick="cerrarModal()" class="text-gray-400 hover:text-gray-500">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <form id="form-aprobacion" class="mt-4 space-y-4">
+            <input type="hidden" id="clave_acceso" name="clave_acceso" value="">
+
+            <div id="info-factura" class="bg-gray-50 p-3 rounded text-sm">
+                <p><strong>Proveedor:</strong> <span id="info-proveedor"></span></p>
+                <p><strong>Total:</strong> $<span id="info-total"></span></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Categoria de Gasto</label>
+                <select name="categoria_gasto" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                    <option value="">-- Seleccionar --</option>
+                    <option value="operativos">Gastos Operativos</option>
+                    <option value="administrativos">Gastos Administrativos</option>
+                    <option value="ventas">Gastos de Ventas</option>
+                    <option value="financieros">Gastos Financieros</option>
+                    <option value="compras">Compra de Bienes</option>
+                    <option value="servicios">Servicios Profesionales</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Retencion IR</label>
+                <select name="codigo_retencion_ir" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                    <option value="">-- Sin retencion --</option>
+                    {% for c in conceptos_ir %}
+                    <option value="{{ c.codigo }}">{{ c.codigo }} - {{ c.concepto }} ({{ c.porcentaje }}%)</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Retencion IVA</label>
+                <select name="codigo_retencion_iva" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                    <option value="">-- Sin retencion --</option>
+                    {% for c in conceptos_iva %}
+                    <option value="{{ c.codigo }}">{{ c.codigo }} - {{ c.porcentaje }}% IVA</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Notas</label>
+                <textarea name="notas" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm" placeholder="Notas adicionales..."></textarea>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button type="button" onclick="cerrarModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700">
+                    Aprobar Factura
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal de Rechazo -->
+<div id="modal-rechazo" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 items-center justify-center">
+    <div class="relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center pb-3 border-b">
+            <h3 class="text-lg font-medium text-gray-900">Rechazar Factura</h3>
+            <button onclick="cerrarModalRechazo()" class="text-gray-400 hover:text-gray-500">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <form id="form-rechazo" class="mt-4 space-y-4">
+            <input type="hidden" id="clave_acceso_rechazo" name="clave_acceso" value="">
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Motivo del Rechazo</label>
+                <select id="motivo-select" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                    <option value="">-- Seleccionar motivo --</option>
+                    <option value="duplicada">Factura duplicada</option>
+                    <option value="proveedor_no_autorizado">Proveedor no autorizado</option>
+                    <option value="datos_incorrectos">Datos incorrectos</option>
+                    <option value="no_corresponde">No corresponde a la empresa</option>
+                    <option value="otro">Otro motivo</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Detalle</label>
+                <textarea name="motivo" id="motivo-detalle" rows="3" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm" placeholder="Explique el motivo del rechazo..."></textarea>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button type="button" onclick="cerrarModalRechazo()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700">
+                    Confirmar Rechazo
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleDetalle(id) {
+    const el = document.getElementById('detalle-' + id);
+    el.classList.toggle('hidden');
+}
+
+function mostrarModalAprobacion(claveAcceso, proveedor, total) {
+    document.getElementById('clave_acceso').value = claveAcceso;
+    document.getElementById('info-proveedor').textContent = proveedor;
+    document.getElementById('info-total').textContent = parseFloat(total).toFixed(2);
+    document.getElementById('modal-aprobacion').classList.add('active');
+}
+
+function cerrarModal() {
+    document.getElementById('modal-aprobacion').classList.remove('active');
+}
+
+function rechazarFactura(claveAcceso) {
+    document.getElementById('clave_acceso_rechazo').value = claveAcceso;
+    document.getElementById('modal-rechazo').classList.add('active');
+}
+
+function cerrarModalRechazo() {
+    document.getElementById('modal-rechazo').classList.remove('active');
+}
+
+// Manejar seleccion de motivo predefinido
+document.getElementById('motivo-select').addEventListener('change', function() {
+    const detalle = document.getElementById('motivo-detalle');
+    const motivos = {
+        'duplicada': 'Factura ya registrada anteriormente en el sistema.',
+        'proveedor_no_autorizado': 'El proveedor no esta autorizado para facturar a esta empresa.',
+        'datos_incorrectos': 'Los datos de la factura no coinciden con la operacion realizada.',
+        'no_corresponde': 'Esta factura no corresponde a compras de esta empresa.'
+    };
+    if (motivos[this.value]) {
+        detalle.value = motivos[this.value];
+    }
+});
+
+// Enviar formulario de aprobacion
+document.getElementById('form-aprobacion').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const claveAcceso = document.getElementById('clave_acceso').value;
+    const formData = new FormData(this);
+
+    const data = {
+        proveedor_id: null,
+        categoria_gasto: formData.get('categoria_gasto') || null,
+        codigo_retencion_ir: formData.get('codigo_retencion_ir') || null,
+        codigo_retencion_iva: formData.get('codigo_retencion_iva') || null,
+        notas: formData.get('notas') || null
+    };
+
+    try {
+        const response = await fetch(`/api/v1/sri/sincronizacion/aprobar/${claveAcceso}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            alert('Factura aprobada correctamente');
+            location.reload();
+        } else {
+            const error = await response.json();
+            alert('Error: ' + (error.detail || 'No se pudo aprobar la factura'));
+        }
+    } catch (err) {
+        alert('Error de conexion: ' + err.message);
+    }
+});
+
+// Enviar formulario de rechazo
+document.getElementById('form-rechazo').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const claveAcceso = document.getElementById('clave_acceso_rechazo').value;
+    const motivo = document.getElementById('motivo-detalle').value;
+
+    if (!motivo.trim()) {
+        alert('Debe indicar el motivo del rechazo');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/v1/sri/sincronizacion/rechazar/${claveAcceso}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({motivo: motivo})
+        });
+
+        if (response.ok) {
+            alert('Factura rechazada');
+            location.reload();
+        } else {
+            const error = await response.json();
+            alert('Error: ' + (error.detail || 'No se pudo rechazar la factura'));
+        }
+    } catch (err) {
+        alert('Error de conexion: ' + err.message);
+    }
+});
+</script>
+{% endblock %}

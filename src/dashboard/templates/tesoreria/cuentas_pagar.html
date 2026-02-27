@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Cuentas por Pagar{% endblock %}
+{% block header_title %}Cuentas por Pagar{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <!-- Header con filtros -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h2 class="text-xl font-semibold text-gray-800">Obligaciones con Proveedores</h2>
+            <p class="text-sm text-gray-500">Saldos pendientes de pago por proveedor</p>
+        </div>
+        <form method="GET" class="flex items-center space-x-2 bg-white p-2 rounded-lg shadow-sm">
+            <select name="anio" class="border-gray-300 rounded text-sm">
+                {% for a in range(2024, 2027) %}
+                <option value="{{ a }}" {% if a == anio %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+            <select name="mes" class="border-gray-300 rounded text-sm">
+                {% set meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+                'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] %}
+                {% for m in range(1, 13) %}
+                <option value="{{ m }}" {% if m == mes %}selected{% endif %}>{{ meses[m-1] }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="bg-ecu-blue text-white px-4 py-2 rounded hover:bg-blue-800">
+                Consultar
+            </button>
+        </form>
+    </div>
+
+    <!-- Tarjetas de resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-sm text-gray-500">Total por Pagar</p>
+            <p class="text-2xl font-bold text-gray-800">${{ '{:,.2f}'.format(resumen.total_pagar) }}</p>
+        </div>
+        <div class="bg-green-50 rounded-lg shadow-sm p-4 border border-green-200">
+            <p class="text-sm text-green-600">Vigente</p>
+            <p class="text-2xl font-bold text-green-700">${{ '{:,.2f}'.format(resumen.vigente) }}</p>
+            <p class="text-xs text-gray-500">0-30 dias</p>
+        </div>
+        <div class="bg-yellow-50 rounded-lg shadow-sm p-4 border border-yellow-200">
+            <p class="text-sm text-yellow-600">Por Vencer</p>
+            <p class="text-2xl font-bold text-yellow-700">${{ '{:,.2f}'.format(resumen.por_vencer) }}</p>
+            <p class="text-xs text-gray-500">31-60 dias</p>
+        </div>
+        <div class="bg-red-50 rounded-lg shadow-sm p-4 border border-red-300">
+            <p class="text-sm text-red-600">Vencido</p>
+            <p class="text-2xl font-bold text-red-700">${{ '{:,.2f}'.format(resumen.vencido) }}</p>
+            <p class="text-xs text-gray-500">> 60 dias</p>
+        </div>
+    </div>
+
+    <!-- Alertas de vencimiento -->
+    {% if resumen.vencido > 0 %}
+    <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">Obligaciones Vencidas</h3>
+                <p class="mt-1 text-sm text-red-700">
+                    Tiene ${{ '{:,.2f}'.format(resumen.vencido) }} en obligaciones vencidas. Revise las facturas atrasadas para evitar problemas con proveedores.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tabla de Antiguedad por Proveedor -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="bg-red-600 text-white px-4 py-3 font-semibold flex justify-between items-center">
+            <span>ANTIGUEDAD DE OBLIGACIONES</span>
+            <a href="/dashboard/tesoreria/cuentas-pagar/excel?anio={{ anio }}&mes={{ mes }}"
+               class="text-sm bg-green-600 hover:bg-green-700 px-3 py-1 rounded">
+                Exportar Excel
+            </a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proveedor</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">RUC</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase text-green-600">Vigente</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase text-yellow-600">31-60</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase text-orange-600">61-90</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase text-red-600">> 90</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for proveedor in proveedores %}
+                    <tr class="{% if proveedor.dias_90_mas > 0 %}bg-red-50{% elif proveedor.dias_61_90 > 0 %}bg-yellow-50{% else %}bg-white{% endif %} hover:bg-blue-50">
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ proveedor.razon_social }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600 font-mono">{{ proveedor.identificacion }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-bold">${{ '{:,.2f}'.format(proveedor.total) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-green-700">${{ '{:,.2f}'.format(proveedor.vigente) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-yellow-700">${{ '{:,.2f}'.format(proveedor.dias_31_60) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-orange-700">${{ '{:,.2f}'.format(proveedor.dias_61_90) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-red-700">${{ '{:,.2f}'.format(proveedor.dias_90_mas) }}</td>
+                        <td class="px-4 py-3 text-center">
+                            <a href="/dashboard/tesoreria/proveedor/{{ proveedor.id }}/movimientos"
+                               class="text-ecu-blue hover:underline text-sm">Ver detalle</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                            No hay saldos pendientes de pago
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if proveedores %}
+                <tfoot class="bg-gray-100 font-bold">
+                    <tr>
+                        <td colspan="2" class="px-4 py-3 text-right">TOTALES:</td>
+                        <td class="px-4 py-3 text-right font-mono">${{ '{:,.2f}'.format(resumen.total_pagar) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-green-700">${{ '{:,.2f}'.format(resumen.vigente) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-yellow-700">${{ '{:,.2f}'.format(resumen.dias_31_60) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-orange-700">${{ '{:,.2f}'.format(resumen.dias_61_90) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-red-700">${{ '{:,.2f}'.format(resumen.dias_90_mas) }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+
+    <!-- Proximos Pagos -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="bg-gray-600 text-white px-4 py-3 font-semibold">
+            PROXIMOS VENCIMIENTOS (7 DIAS)
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Factura</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proveedor</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vencimiento</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Dias</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Prioridad</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for factura in proximos_pagos %}
+                    <tr class="{% if factura.dias_para_vencer <= 0 %}bg-red-50{% elif factura.dias_para_vencer <= 3 %}bg-yellow-50{% else %}bg-white{% endif %}">
+                        <td class="px-4 py-3 text-sm font-mono">{{ factura.numero_factura }}</td>
+                        <td class="px-4 py-3 text-sm">{{ factura.proveedor }}</td>
+                        <td class="px-4 py-3 text-sm">{{ factura.fecha_vencimiento }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-bold">${{ '{:,.2f}'.format(factura.saldo) }}</td>
+                        <td class="px-4 py-3 text-center">
+                            {% if factura.dias_para_vencer <= 0 %}
+                            <span class="text-red-600 font-bold">Vencido</span>
+                            {% else %}
+                            <span class="text-gray-600">{{ factura.dias_para_vencer }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            {% if factura.dias_para_vencer <= 0 %}
+                            <span class="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 rounded-full">Urgente</span>
+                            {% elif factura.dias_para_vencer <= 3 %}
+                            <span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 rounded-full">Alta</span>
+                            {% else %}
+                            <span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">Normal</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                            No hay pagos proximos en los siguientes 7 dias
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Todas las Facturas Pendientes -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="px-4 py-3 border-b bg-gray-50 flex justify-between items-center">
+            <h3 class="font-semibold text-gray-700">Todas las Facturas Pendientes</h3>
+            <span class="text-sm text-gray-500">{{ facturas|length }} facturas</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Factura</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Emision</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vencimiento</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proveedor</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Abonado</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for factura in facturas %}
+                    <tr class="{% if factura.dias_vencida > 60 %}bg-red-50{% elif factura.dias_vencida > 30 %}bg-yellow-50{% else %}bg-white{% endif %} hover:bg-blue-50">
+                        <td class="px-4 py-3 text-sm font-mono">{{ factura.numero_factura }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ factura.fecha_emision }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ factura.fecha_vencimiento }}</td>
+                        <td class="px-4 py-3 text-sm">{{ factura.proveedor[:30] }}{% if factura.proveedor|length > 30 %}...{% endif %}</td>
+                        <td class="px-4 py-3 text-right font-mono">${{ '{:,.2f}'.format(factura.total) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-green-600">${{ '{:,.2f}'.format(factura.abonado) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-bold">${{ '{:,.2f}'.format(factura.saldo) }}</td>
+                        <td class="px-4 py-3 text-center">
+                            {% if factura.dias_vencida > 60 %}
+                            <span class="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 rounded-full">Vencida</span>
+                            {% elif factura.dias_vencida > 0 %}
+                            <span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 rounded-full">Por vencer</span>
+                            {% else %}
+                            <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">Vigente</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                            No hay facturas pendientes de pago
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

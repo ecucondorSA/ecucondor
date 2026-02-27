@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Asiento {{ asiento.numero_asiento }}{% endblock %}
+{% block header_title %}Asiento Contable #{{ asiento.numero_asiento }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+    <!-- Header con estado y acciones -->
+    <div class="flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+            {% if asiento.estado == 'borrador' %}
+            <span class="px-3 py-1 text-sm rounded-full bg-yellow-100 text-yellow-800 font-medium">BORRADOR</span>
+            {% elif asiento.estado == 'contabilizado' %}
+            <span class="px-3 py-1 text-sm rounded-full bg-green-100 text-green-800 font-medium">CONTABILIZADO</span>
+            {% elif asiento.estado == 'anulado' %}
+            <span class="px-3 py-1 text-sm rounded-full bg-red-100 text-red-800 font-medium">ANULADO</span>
+            {% endif %}
+            <span class="text-sm text-gray-500">{{ asiento.tipo|capitalize }}</span>
+        </div>
+        <div class="flex space-x-2">
+            {% if asiento.estado == 'borrador' %}
+            <button onclick="contabilizar()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
+                Contabilizar
+            </button>
+            {% endif %}
+            {% if asiento.estado == 'contabilizado' %}
+            <button onclick="anular()" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition">
+                Anular
+            </button>
+            {% endif %}
+            <a href="/dashboard/contabilidad/asientos" class="border border-gray-300 px-4 py-2 rounded hover:bg-gray-50 transition">
+                Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Datos Generales -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-medium text-gray-800 mb-4">Informacion del Asiento</h3>
+        <div class="grid grid-cols-4 gap-4">
+            <div>
+                <p class="text-sm text-gray-500">Numero</p>
+                <p class="font-mono font-bold text-lg">{{ asiento.numero_asiento }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Fecha</p>
+                <p class="font-medium">{{ asiento.fecha }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Tipo</p>
+                <p class="font-medium">{{ asiento.tipo|capitalize }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Referencia</p>
+                <p class="font-medium">{{ asiento.referencia or '-' }}</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <p class="text-sm text-gray-500">Concepto</p>
+            <p class="font-medium text-gray-900">{{ asiento.concepto }}</p>
+        </div>
+        {% if asiento.origen_tipo %}
+        <div class="mt-4">
+            <p class="text-sm text-gray-500">Origen</p>
+            <p class="text-sm text-gray-600">{{ asiento.origen_tipo|capitalize }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Movimientos -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="p-4 border-b">
+            <h3 class="text-lg font-medium text-gray-800">Detalle de Movimientos</h3>
+        </div>
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cuenta</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Debe</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Haber</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for mov in movimientos %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3">
+                        <div class="font-mono text-sm text-ecu-blue">{{ mov.cuenta_codigo }}</div>
+                        <div class="text-sm text-gray-600">{{ mov.cuentas_contables.nombre if mov.cuentas_contables else '' }}</div>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-700">{{ mov.concepto or '-' }}</td>
+                    <td class="px-4 py-3 text-right">
+                        {% if mov.debe > 0 %}
+                        <span class="font-mono font-medium text-green-700">${{ '{:,.2f}'.format(mov.debe) }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        {% if mov.haber > 0 %}
+                        <span class="font-mono font-medium text-red-700">${{ '{:,.2f}'.format(mov.haber) }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="bg-gray-100">
+                <tr class="font-bold">
+                    <td colspan="2" class="px-4 py-3 text-right">TOTALES:</td>
+                    <td class="px-4 py-3 text-right font-mono text-green-700">${{ '{:,.2f}'.format(asiento.total_debe) }}</td>
+                    <td class="px-4 py-3 text-right font-mono text-red-700">${{ '{:,.2f}'.format(asiento.total_haber) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <!-- Estado del cuadre -->
+    <div class="p-4 rounded-lg text-center font-bold
+        {% if asiento.total_debe == asiento.total_haber %}bg-green-100 text-green-800
+        {% else %}bg-red-100 text-red-800{% endif %}">
+        {% if asiento.total_debe == asiento.total_haber %}
+        ASIENTO CUADRADO
+        {% else %}
+        ASIENTO DESCUADRADO - Diferencia: ${{ '{:,.2f}'.format((asiento.total_debe - asiento.total_haber)|abs) }}
+        {% endif %}
+    </div>
+
+    <!-- Info de anulacion si aplica -->
+    {% if asiento.estado == 'anulado' %}
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <h4 class="font-medium text-red-800 mb-2">Asiento Anulado</h4>
+        <p class="text-sm text-red-700"><strong>Motivo:</strong> {{ asiento.motivo_anulacion or 'No especificado' }}</p>
+        <p class="text-sm text-red-700"><strong>Fecha anulacion:</strong> {{ asiento.anulado_at }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Auditoria -->
+    <div class="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
+        <p><strong>Creado:</strong> {{ asiento.created_at }}</p>
+        <p><strong>Actualizado:</strong> {{ asiento.updated_at }}</p>
+    </div>
+</div>
+
+<script>
+async function contabilizar() {
+    if (!confirm('Contabilizar este asiento? Una vez contabilizado no podra editarse.')) return;
+
+    try {
+        const resp = await fetch('/api/v1/ledger/asientos/{{ asiento.id }}/contabilizar', {
+            method: 'POST'
+        });
+
+        if (resp.ok) {
+            alert('Asiento contabilizado exitosamente');
+            window.location.reload();
+        } else {
+            const err = await resp.json();
+            alert('Error: ' + (err.detail || 'No se pudo contabilizar'));
+        }
+    } catch (err) {
+        alert('Error de conexion');
+    }
+}
+
+async function anular() {
+    const motivo = prompt('Motivo de anulacion:');
+    if (!motivo) return;
+
+    try {
+        const resp = await fetch('/api/v1/ledger/asientos/{{ asiento.id }}/anular', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({motivo: motivo})
+        });
+
+        if (resp.ok) {
+            alert('Asiento anulado exitosamente');
+            window.location.reload();
+        } else {
+            const err = await resp.json();
+            alert('Error: ' + (err.detail || 'No se pudo anular'));
+        }
+    } catch (err) {
+        alert('Error de conexion');
+    }
+}
+</script>
+{% endblock %}

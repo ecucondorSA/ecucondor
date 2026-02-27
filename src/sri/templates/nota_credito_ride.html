@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>NOTA DE CRÉDITO - {{ numero_comprobante }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 9pt; line-height: 1.4; color: #000; }
+        .container { padding: 10px; }
+        .header { display: table; width: 100%; margin-bottom: 15px; }
+        .header-left, .header-right { display: table-cell; vertical-align: top; }
+        .header-left { width: 55%; padding-right: 15px; }
+        .header-right { width: 45%; border: 2px solid #000; padding: 10px; }
+        .emisor-nombre { font-size: 14pt; font-weight: bold; margin-bottom: 5px; }
+        .emisor-comercial { font-size: 11pt; margin-bottom: 8px; }
+        .emisor-info { font-size: 9pt; margin-bottom: 3px; }
+        .factura-box { text-align: center; }
+        .factura-ruc { font-size: 11pt; font-weight: bold; margin-bottom: 8px; }
+        .factura-tipo { font-size: 12pt; font-weight: bold; margin-bottom: 5px; color: #c00; }
+        .factura-numero { font-size: 11pt; font-weight: bold; margin-bottom: 10px; }
+        .factura-label { font-size: 8pt; margin-bottom: 2px; }
+        .factura-value { font-size: 9pt; margin-bottom: 8px; }
+        .clave-acceso-box { border: 1px solid #000; padding: 8px; margin-top: 10px; text-align: center; }
+        .clave-acceso-label { font-size: 8pt; margin-bottom: 3px; }
+        .clave-acceso { font-family: monospace; font-size: 8pt; letter-spacing: 0.5px; word-break: break-all; }
+        .comprador-section { border: 1px solid #000; padding: 10px; margin-bottom: 15px; }
+        .comprador-row { display: table; width: 100%; margin-bottom: 3px; }
+        .comprador-label { display: table-cell; width: 180px; font-weight: bold; }
+        .comprador-value { display: table-cell; }
+        .documento-modificado { background-color: #fff3cd; border: 1px solid #ffc107; padding: 10px; margin-bottom: 15px; }
+        .documento-modificado-title { font-weight: bold; margin-bottom: 5px; color: #856404; }
+        .detalles-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        .detalles-table th { background-color: #f0f0f0; border: 1px solid #000; padding: 5px; font-size: 8pt; text-align: center; }
+        .detalles-table td { border: 1px solid #000; padding: 4px 5px; font-size: 8pt; }
+        .detalles-table .col-codigo { width: 12%; }
+        .detalles-table .col-descripcion { width: 40%; }
+        .detalles-table .col-cantidad { width: 10%; text-align: right; }
+        .detalles-table .col-precio { width: 13%; text-align: right; }
+        .detalles-table .col-descuento { width: 10%; text-align: right; }
+        .detalles-table .col-total { width: 15%; text-align: right; }
+        .footer { display: table; width: 100%; }
+        .footer-left { display: table-cell; width: 60%; vertical-align: top; padding-right: 15px; }
+        .footer-right { display: table-cell; width: 40%; vertical-align: top; }
+        .info-adicional { border: 1px solid #000; padding: 8px; }
+        .info-adicional-title { font-weight: bold; margin-bottom: 5px; font-size: 9pt; }
+        .info-adicional-item { font-size: 8pt; margin-bottom: 2px; }
+        .totales-table { width: 100%; border-collapse: collapse; }
+        .totales-table td { border: 1px solid #000; padding: 4px 8px; font-size: 9pt; }
+        .totales-table .label { background-color: #f0f0f0; font-weight: bold; }
+        .totales-table .value { text-align: right; width: 100px; }
+        .totales-table .total-final { font-size: 11pt; font-weight: bold; }
+        .pie-pagina { margin-top: 20px; text-align: center; font-size: 7pt; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <div class="emisor-nombre">{{ emisor_razon_social }}</div>
+                {% if emisor_nombre_comercial %}
+                <div class="emisor-comercial">{{ emisor_nombre_comercial }}</div>
+                {% endif %}
+                <div class="emisor-info"><strong>Dirección Matriz:</strong> {{ emisor_direccion }}</div>
+                <div class="emisor-info"><strong>Obligado a llevar Contabilidad:</strong> {{ emisor_obligado_contabilidad }}</div>
+                {% if emisor_contribuyente_especial %}
+                <div class="emisor-info"><strong>Contribuyente Especial Nro:</strong> {{ emisor_contribuyente_especial }}</div>
+                {% endif %}
+            </div>
+            <div class="header-right">
+                <div class="factura-box">
+                    <div class="factura-ruc">R.U.C.: {{ emisor_ruc }}</div>
+                    <div class="factura-tipo">{{ tipo_comprobante }}</div>
+                    <div class="factura-numero">No. {{ numero_comprobante }}</div>
+                    <div class="factura-label">NÚMERO DE AUTORIZACIÓN</div>
+                    <div class="factura-value">{{ numero_autorizacion }}</div>
+                    <div class="factura-label">FECHA Y HORA DE AUTORIZACIÓN</div>
+                    <div class="factura-value">{{ fecha_autorizacion|formato_fecha('%d/%m/%Y %H:%M:%S') if fecha_autorizacion else '-' }}</div>
+                    <div class="factura-label">AMBIENTE: <strong>{{ ambiente }}</strong></div>
+                </div>
+                <div class="clave-acceso-box">
+                    <div class="clave-acceso-label">CLAVE DE ACCESO</div>
+                    <div class="clave-acceso">{{ clave_acceso }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Datos del comprador -->
+        <div class="comprador-section">
+            <div class="comprador-row">
+                <span class="comprador-label">Razón Social / Nombres:</span>
+                <span class="comprador-value">{{ comprador_razon_social }}</span>
+            </div>
+            <div class="comprador-row">
+                <span class="comprador-label">{{ comprador_tipo_id }}:</span>
+                <span class="comprador-value">{{ comprador_identificacion }}</span>
+            </div>
+            <div class="comprador-row">
+                <span class="comprador-label">Fecha de Emisión:</span>
+                <span class="comprador-value">{{ fecha_emision|formato_fecha }}</span>
+            </div>
+        </div>
+
+        <!-- Documento modificado -->
+        {% if documento_modificado %}
+        <div class="documento-modificado">
+            <div class="documento-modificado-title">DOCUMENTO QUE SE MODIFICA</div>
+            <div class="comprador-row">
+                <span class="comprador-label">Tipo Documento:</span>
+                <span class="comprador-value">FACTURA</span>
+            </div>
+            <div class="comprador-row">
+                <span class="comprador-label">No. Documento:</span>
+                <span class="comprador-value">{{ documento_modificado.numero }}</span>
+            </div>
+            <div class="comprador-row">
+                <span class="comprador-label">Fecha Emisión:</span>
+                <span class="comprador-value">{{ documento_modificado.fecha|formato_fecha }}</span>
+            </div>
+            <div class="comprador-row">
+                <span class="comprador-label">Motivo:</span>
+                <span class="comprador-value">{{ motivo }}</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Detalles -->
+        <table class="detalles-table">
+            <thead>
+                <tr>
+                    <th class="col-codigo">Cód. Principal</th>
+                    <th class="col-descripcion">Descripción</th>
+                    <th class="col-cantidad">Cantidad</th>
+                    <th class="col-precio">Precio Unitario</th>
+                    <th class="col-descuento">Descuento</th>
+                    <th class="col-total">Precio Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for detalle in detalles %}
+                <tr>
+                    <td class="col-codigo">{{ detalle.codigo }}</td>
+                    <td class="col-descripcion">{{ detalle.descripcion }}</td>
+                    <td class="col-cantidad">{{ detalle.cantidad|formato_cantidad }}</td>
+                    <td class="col-precio">{{ detalle.precio_unitario|formato_monto }}</td>
+                    <td class="col-descuento">{{ detalle.descuento|formato_monto }}</td>
+                    <td class="col-total">{{ detalle.precio_total|formato_monto }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-left">
+                {% if info_adicional %}
+                <div class="info-adicional">
+                    <div class="info-adicional-title">Información Adicional</div>
+                    {% for key, value in info_adicional.items() %}
+                    <div class="info-adicional-item"><strong>{{ key }}:</strong> {{ value }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="footer-right">
+                <table class="totales-table">
+                    <tr>
+                        <td class="label">SUBTOTAL 15%</td>
+                        <td class="value">{{ subtotal_15|formato_monto }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">SUBTOTAL 0%</td>
+                        <td class="value">{{ subtotal_0|formato_monto }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">SUBTOTAL SIN IMPUESTOS</td>
+                        <td class="value">{{ subtotal_sin_impuestos|formato_monto }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">IVA 15%</td>
+                        <td class="value">{{ iva_15|formato_monto }}</td>
+                    </tr>
+                    <tr class="total-final">
+                        <td class="label">VALOR TOTAL</td>
+                        <td class="value">{{ importe_total|formato_monto }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="pie-pagina">
+            Documento generado electrónicamente - ECUCONDOR SAS | {{ fecha_generacion }}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "sri_scraper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@sparticuz/chromium": "^143.0.4",
+    "puppeteer": "^24.37.5"
+  }
+}

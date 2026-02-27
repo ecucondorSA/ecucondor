@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva Transaccion Cripto{% endblock %}
+{% block header_title %}Nueva Transaccion de Intermediacion{% endblock %}
+
+{% block head %}
+<style>
+    .preview-box { @apply bg-gray-50 border rounded-lg p-4; }
+    .preview-row { @apply flex justify-between py-1 border-b border-gray-200 last:border-0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Info -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 class="font-medium text-blue-800 mb-2">Flujo de la Transaccion</h4>
+        <div class="text-sm text-blue-700">
+            <ol class="list-decimal list-inside space-y-1">
+                <li>Luis (comprador) paga a ECUCONDOR: <strong>Monto + Comision 1.5% + IVA</strong></li>
+                <li>ECUCONDOR emite <strong>Liquidacion de Compra</strong> a Paula (vendedor)</li>
+                <li>ECUCONDOR emite <strong>Factura</strong> a Luis por la comision</li>
+                <li>ECUCONDOR paga a Paula: <strong>Monto total cripto</strong></li>
+            </ol>
+        </div>
+    </div>
+
+    <form method="post" action="/dashboard/compras/liquidaciones/transaccion/crear" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Vendedor (Paula) -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                    </svg>
+                    Vendedor (recibe pago)
+                </h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Cedula</label>
+                        <input type="text" name="vendedor_cedula" required maxlength="10"
+                               pattern="[0-9]{10}"
+                               class="w-full border rounded px-3 py-2 focus:ring-ecu-blue focus:border-ecu-blue"
+                               placeholder="1234567890">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Completo</label>
+                        <input type="text" name="vendedor_nombre" required
+                               class="w-full border rounded px-3 py-2 focus:ring-ecu-blue focus:border-ecu-blue"
+                               placeholder="Paula Garcia Lopez">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comprador (Luis) -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                    </svg>
+                    Comprador (realiza pago)
+                </h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Cedula</label>
+                        <input type="text" name="comprador_cedula" required maxlength="10"
+                               pattern="[0-9]{10}"
+                               class="w-full border rounded px-3 py-2 focus:ring-ecu-blue focus:border-ecu-blue"
+                               placeholder="0987654321">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Completo</label>
+                        <input type="text" name="comprador_nombre" required
+                               class="w-full border rounded px-3 py-2 focus:ring-ecu-blue focus:border-ecu-blue"
+                               placeholder="Luis Martinez Perez">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Datos de la transaccion -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Datos de la Transaccion</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                    <input type="date" name="fecha" value="{{ today }}" required
+                           class="w-full border rounded px-3 py-2 focus:ring-ecu-blue focus:border-ecu-blue">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo Cripto</label>
+                    <select name="tipo_cripto" class="w-full border rounded px-3 py-2 focus:ring-ecu-blue focus:border-ecu-blue">
+                        <option value="USDT" selected>USDT (Tether)</option>
+                        <option value="BTC">BTC (Bitcoin)</option>
+                        <option value="ETH">ETH (Ethereum)</option>
+                        <option value="OTRO">Otro</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Monto Cripto (USD)</label>
+                    <input type="number" name="monto_cripto" required step="0.01" min="1"
+                           id="monto_cripto"
+                           class="w-full border rounded px-3 py-2 focus:ring-ecu-blue focus:border-ecu-blue"
+                           placeholder="1000.00"
+                           onchange="calcularPreview()">
+                </div>
+            </div>
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Concepto</label>
+                <input type="text" name="concepto" value="Compra de criptomonedas"
+                       class="w-full border rounded px-3 py-2 focus:ring-ecu-blue focus:border-ecu-blue">
+            </div>
+        </div>
+
+        <!-- Preview de calculos -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Resumen de la Transaccion</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Vendedor -->
+                <div class="preview-box">
+                    <h4 class="font-medium text-red-600 mb-2">Paula recibe:</h4>
+                    <div class="preview-row">
+                        <span>Monto cripto</span>
+                        <span class="font-mono" id="paula_monto">$0.00</span>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-gray-300">
+                        <div class="preview-row font-bold">
+                            <span>Total a pagar</span>
+                            <span class="font-mono text-red-600" id="paula_total">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ECUCONDOR -->
+                <div class="preview-box bg-blue-50 border-blue-200">
+                    <h4 class="font-medium text-blue-600 mb-2">ECUCONDOR gana:</h4>
+                    <div class="preview-row">
+                        <span>Comision (1.5%)</span>
+                        <span class="font-mono" id="ecu_comision">$0.00</span>
+                    </div>
+                    <div class="preview-row">
+                        <span>IVA Ventas (15%)</span>
+                        <span class="font-mono" id="ecu_iva_ventas">$0.00</span>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-blue-300">
+                        <div class="preview-row font-bold">
+                            <span>Ingreso total</span>
+                            <span class="font-mono text-blue-600" id="ecu_total">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comprador -->
+                <div class="preview-box">
+                    <h4 class="font-medium text-green-600 mb-2">Luis paga:</h4>
+                    <div class="preview-row">
+                        <span>Monto cripto</span>
+                        <span class="font-mono" id="luis_monto">$0.00</span>
+                    </div>
+                    <div class="preview-row">
+                        <span>Comision (1.5%)</span>
+                        <span class="font-mono" id="luis_comision">$0.00</span>
+                    </div>
+                    <div class="preview-row">
+                        <span>IVA comision</span>
+                        <span class="font-mono" id="luis_iva">$0.00</span>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-gray-300">
+                        <div class="preview-row font-bold">
+                            <span>Total a pagar</span>
+                            <span class="font-mono text-green-600" id="luis_total">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documentos a generar -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <h4 class="font-medium text-yellow-800 mb-2">Documentos SRI que se generaran:</h4>
+            <ul class="text-sm text-yellow-700 space-y-1">
+                <li>1. <strong>Liquidacion de Compra (03)</strong> a Paula por el cripto (IVA exento)</li>
+                <li>2. <strong>Factura (01)</strong> a Luis por la comision de intermediacion (IVA 15%)</li>
+            </ul>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end space-x-4">
+            <a href="/dashboard/compras/liquidaciones"
+               class="px-6 py-2 border rounded text-gray-600 hover:bg-gray-100 transition">
+                Cancelar
+            </a>
+            <button type="submit"
+                    class="px-6 py-2 bg-ecu-blue text-white rounded hover:bg-blue-700 transition">
+                Procesar Transaccion
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function calcularPreview() {
+    const monto = parseFloat(document.getElementById('monto_cripto').value) || 0;
+    const comision = monto * 0.015;  // 1.5%
+    const iva_comision = comision * 0.15;  // 15% sobre comision
+    const total_comision = comision + iva_comision;
+    const total_luis = monto + total_comision;
+
+    // Paula recibe
+    document.getElementById('paula_monto').textContent = formatMoney(monto);
+    document.getElementById('paula_total').textContent = formatMoney(monto);
+
+    // ECUCONDOR gana
+    document.getElementById('ecu_comision').textContent = formatMoney(comision);
+    document.getElementById('ecu_iva_ventas').textContent = formatMoney(iva_comision);
+    document.getElementById('ecu_total').textContent = formatMoney(total_comision);
+
+    // Luis paga
+    document.getElementById('luis_monto').textContent = formatMoney(monto);
+    document.getElementById('luis_comision').textContent = formatMoney(comision);
+    document.getElementById('luis_iva').textContent = formatMoney(iva_comision);
+    document.getElementById('luis_total').textContent = formatMoney(total_luis);
+}
+
+function formatMoney(value) {
+    return '$' + value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+// Calcular al cargar si hay valor
+document.addEventListener('DOMContentLoaded', function() {
+    calcularPreview();
+});
+</script>
+{% endblock %}

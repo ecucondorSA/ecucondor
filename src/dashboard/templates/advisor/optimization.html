@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block header_title %}Asesor Fiscal{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+    <!-- Header -->
+    <div class="text-center mb-8 border-b pb-4">
+        <h2 class="text-2xl font-bold text-gray-800">Optimización Fiscal</h2>
+        <h3 class="text-xl text-gray-600 mt-1">Análisis y Proyecciones</h3>
+        <p class="text-gray-500 mt-1">Ejercicio Fiscal {{ periodo.anio }} (Acumulado a {{ periodo.mes_nombre }})</p>
+    </div>
+
+    <!-- Resumen Ejecutivo -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+            <p class="text-sm text-blue-600 font-semibold uppercase">Utilidad Operativa</p>
+            <p class="text-2xl font-bold text-blue-900 mt-2">${{ "%.2f"|format(estado.utilidad_bruta) }}</p>
+        </div>
+        <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-100">
+            <p class="text-sm text-yellow-600 font-semibold uppercase">Impuesto Estimado (25%)</p>
+            <p class="text-2xl font-bold text-yellow-900 mt-2">${{ "%.2f"|format(impuesto_estimado) }}</p>
+            <p class="text-xs text-yellow-700 mt-1">*Estimación referencial régimen general</p>
+        </div>
+        <div class="bg-green-50 p-4 rounded-lg border border-green-100">
+            <p class="text-sm text-green-600 font-semibold uppercase">Margen de Utilidad</p>
+            <p class="text-2xl font-bold text-green-900 mt-2">
+                {% if estado.total_ingresos > 0 %}
+                {{ "%.1f"|format(estado.utilidad_bruta / estado.total_ingresos * 100) }}%
+                {% else %}
+                0.0%
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Sugerencias y Alertas -->
+    <div class="mb-8">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Sugerencias de Optimización</h3>
+
+        {% if sugerencias %}
+        <div class="space-y-4">
+            {% for sug in sugerencias %}
+            <div class="p-4 rounded-lg border-l-4 shadow-sm flex items-start
+                {% if sug.tipo == 'info' %}bg-blue-50 border-blue-500 text-blue-800
+                {% elif sug.tipo == 'warning' %}bg-yellow-50 border-yellow-500 text-yellow-800
+                {% elif sug.tipo == 'alert' %}bg-red-50 border-red-500 text-red-800
+                {% else %}bg-gray-50 border-gray-500 text-gray-800{% endif %}">
+
+                <div class="mr-3 mt-1">
+                    {% if sug.tipo == 'info' %}
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    {% elif sug.tipo == 'warning' %}
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                        </path>
+                    </svg>
+                    {% elif sug.tipo == 'alert' %}
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    {% endif %}
+                </div>
+                <div>
+                    <h4 class="font-bold text-sm uppercase">{{ sug.titulo }}</h4>
+                    <p class="mt-1 text-sm">{{ sug.mensaje }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-500 italic">No hay sugerencias específicas por el momento.</p>
+        {% endif %}
+    </div>
+
+    <!-- Estrategias Generales -->
+    <div>
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Estrategias Generales</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="border rounded-lg p-4 hover:shadow-md transition">
+                <h4 class="font-bold text-ecu-blue mb-2">Gastos Deducibles</h4>
+                <p class="text-sm text-gray-600">Asegúrese de solicitar facturas con RUC en todos los gastos
+                    relacionados con la actividad económica: suministros, arriendos, servicios básicos, publicidad, etc.
+                </p>
+            </div>
+            <div class="border rounded-lg p-4 hover:shadow-md transition">
+                <h4 class="font-bold text-ecu-blue mb-2">Beneficios Tributarios</h4>
+                <p class="text-sm text-gray-600">Revise si aplica a beneficios por contratación de personal joven,
+                    personas con discapacidad o inversiones en tecnología.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

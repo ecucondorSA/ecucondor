@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  ecucondor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecucondor-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src
+      - ./certs:/app/certs:ro
+      - ./tests:/app/tests
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Worker para procesamiento asíncrono (opcional, para fase posterior)
+  # worker:
+  #   build: .
+  #   container_name: ecucondor-worker
+  #   command: python -m src.worker
+  #   volumes:
+  #     - ./src:/app/src
+  #     - ./certs:/app/certs:ro
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - ecucondor
+
+networks:
+  default:
+    name: ecucondor-network

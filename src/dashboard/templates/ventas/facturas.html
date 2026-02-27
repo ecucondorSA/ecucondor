@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Facturas Emitidas{% endblock %}
+{% block header_title %}Facturas Emitidas{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Acciones y Filtros -->
+    <div class="flex justify-between items-center flex-wrap gap-4">
+        <a href="/dashboard/ventas/nueva"
+           class="bg-ecu-blue text-white px-4 py-2 rounded hover:bg-blue-700 transition flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Nueva Factura
+        </a>
+
+        <form method="get" class="flex space-x-2 items-center">
+            <select name="estado" class="border rounded px-3 py-2 text-sm">
+                <option value="">Todos los estados</option>
+                <option value="draft" {% if estado == 'draft' %}selected{% endif %}>Borrador</option>
+                <option value="pending" {% if estado == 'pending' %}selected{% endif %}>Pendiente</option>
+                <option value="authorized" {% if estado == 'authorized' %}selected{% endif %}>Autorizada</option>
+                <option value="rejected" {% if estado == 'rejected' %}selected{% endif %}>Rechazada</option>
+                <option value="cancelled" {% if estado == 'cancelled' %}selected{% endif %}>Anulada</option>
+            </select>
+            <input type="month" name="mes" value="{{ mes_filtro }}"
+                   class="border rounded px-3 py-2 text-sm">
+            <button type="submit" class="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300 transition">Filtrar</button>
+        </form>
+    </div>
+
+    <!-- Resumen del Periodo -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Facturas Autorizadas</p>
+            <p class="text-2xl font-bold text-green-600">{{ resumen.autorizadas|default(0) }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Pendientes</p>
+            <p class="text-2xl font-bold text-yellow-600">{{ resumen.pendientes|default(0) }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Total Facturado</p>
+            <p class="text-2xl font-bold text-blue-600">${{ '{:,.2f}'.format(resumen.total_facturado|default(0)) }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">IVA Generado</p>
+            <p class="text-2xl font-bold text-purple-600">${{ '{:,.2f}'.format(resumen.total_iva|default(0)) }}</p>
+        </div>
+    </div>
+
+    <!-- Tabla de Facturas -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Numero</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">IVA</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for factura in facturas %}
+                <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='/dashboard/ventas/{{ factura.id }}'">
+                    <td class="px-4 py-3">
+                        <div class="text-sm font-mono text-gray-900">{{ factura.numero }}</div>
+                        <div class="text-xs text-gray-500">{{ factura.clave_acceso[:20] }}...</div>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-600">{{ factura.fecha_emision }}</td>
+                    <td class="px-4 py-3">
+                        <div class="text-sm font-medium text-gray-900">{{ factura.cliente_razon_social[:40] }}{% if factura.cliente_razon_social|length > 40 %}...{% endif %}</div>
+                        <div class="text-xs text-gray-500">{{ factura.cliente_identificacion }}</div>
+                    </td>
+                    <td class="px-4 py-3 text-right text-sm text-gray-600">${{ '{:,.2f}'.format(factura.subtotal_sin_impuestos|default(0)) }}</td>
+                    <td class="px-4 py-3 text-right text-sm text-gray-600">${{ '{:,.2f}'.format(factura.iva|default(0)) }}</td>
+                    <td class="px-4 py-3 text-right text-sm font-medium text-gray-900">${{ '{:,.2f}'.format(factura.importe_total) }}</td>
+                    <td class="px-4 py-3 text-center">
+                        {% if factura.estado == 'authorized' %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Autorizada</span>
+                        {% elif factura.estado == 'pending' %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">Pendiente</span>
+                        {% elif factura.estado == 'draft' %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Borrador</span>
+                        {% elif factura.estado == 'rejected' %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">Rechazada</span>
+                        {% elif factura.estado == 'cancelled' %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-gray-400 text-white">Anulada</span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">{{ factura.estado }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-center" onclick="event.stopPropagation()">
+                        <div class="flex justify-center space-x-2">
+                            <a href="/dashboard/ventas/{{ factura.id }}" class="text-ecu-blue hover:underline text-sm" title="Ver detalle">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </a>
+                            {% if factura.estado == 'authorized' %}
+                            <button onclick="descargarPDF('{{ factura.id }}')" class="text-green-600 hover:text-green-800" title="Descargar PDF">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </button>
+                            {% elif factura.estado in ['rejected', 'error'] %}
+                            <button onclick="reenviarSRI('{{ factura.id }}')" class="text-yellow-600 hover:text-yellow-800" title="Reenviar al SRI">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                        <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <p>No hay facturas emitidas</p>
+                        <p class="text-sm mt-2">
+                            <a href="/dashboard/ventas/nueva" class="text-ecu-blue hover:underline">Crear primera factura</a>
+                        </p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginacion -->
+    {% if total_pages > 1 %}
+    <div class="flex justify-center space-x-2">
+        {% if page > 1 %}
+        <a href="?page={{ page - 1 }}{% if estado %}&estado={{ estado }}{% endif %}{% if mes_filtro %}&mes={{ mes_filtro }}{% endif %}"
+           class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Anterior</a>
+        {% endif %}
+        <span class="px-4 py-2 text-gray-600">Pagina {{ page }} de {{ total_pages }}</span>
+        {% if page < total_pages %}
+        <a href="?page={{ page + 1 }}{% if estado %}&estado={{ estado }}{% endif %}{% if mes_filtro %}&mes={{ mes_filtro }}{% endif %}"
+           class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Siguiente</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+async function descargarPDF(id) {
+    try {
+        window.open(`/api/v1/invoices/facturas/${id}/pdf`, '_blank');
+    } catch (err) {
+        alert('Error descargando PDF');
+    }
+}
+
+async function reenviarSRI(id) {
+    if (!confirm('Reenviar esta factura al SRI?')) return;
+    try {
+        const resp = await fetch(`/api/v1/invoices/facturas/${id}/reenviar`, {
+            method: 'POST'
+        });
+        if (resp.ok) {
+            alert('Reenvio iniciado. Actualice la pagina en unos segundos.');
+            window.location.reload();
+        } else {
+            const err = await resp.json();
+            alert('Error: ' + (err.detail || 'No se pudo reenviar'));
+        }
+    } catch (err) {
+        alert('Error de conexion');
+    }
+}
+</script>
+{% endblock %}

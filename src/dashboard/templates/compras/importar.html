@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}Importar Facturas{% endblock %}
+{% block header_title %}Importar Facturas XML/PDF{% endblock %}
+
+{% block head %}
+<style>
+    .dropzone {
+        border: 2px dashed #cbd5e1;
+        transition: all 0.3s ease;
+    }
+    .dropzone.dragover {
+        border-color: #0d3b66;
+        background-color: #f0f9ff;
+    }
+    .preview-item {
+        animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Instrucciones -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex">
+            <svg class="w-5 h-5 text-blue-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+                <h3 class="font-semibold text-blue-800">Como obtener los XML del SRI</h3>
+                <ol class="text-sm text-blue-700 mt-2 space-y-1 list-decimal list-inside">
+                    <li>Ingrese a <a href="https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/recibidos/comprobantesRecibidos.jsf" target="_blank" class="underline">SRI en Linea - Comprobantes Recibidos</a></li>
+                    <li>Seleccione el periodo y descargue los XML autorizados</li>
+                    <li>Arrastre los archivos XML a esta ventana</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zona de arrastre -->
+    <div id="dropzone" class="dropzone bg-white rounded-lg p-12 text-center cursor-pointer">
+        <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+        </svg>
+        <p class="text-lg text-gray-600 mb-2">Arrastra archivos XML aqui</p>
+        <p class="text-sm text-gray-400">o haz clic para seleccionar</p>
+        <input type="file" id="fileInput" multiple accept=".xml" class="hidden">
+    </div>
+
+    <!-- Vista previa de archivos -->
+    <div id="preview-container" class="hidden">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-800">Facturas a Importar</h3>
+            <div class="flex space-x-2">
+                <button onclick="limpiarPreview()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Limpiar</button>
+                <button onclick="importarTodas()" id="btn-importar" class="px-4 py-2 bg-ecu-blue text-white rounded hover:bg-blue-700">
+                    Importar Todas
+                </button>
+            </div>
+        </div>
+
+        <div id="preview-list" class="space-y-3">
+            <!-- Items dinamicos -->
+        </div>
+    </div>
+
+    <!-- Resultados de importacion -->
+    <div id="results-container" class="hidden">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Resultados de Importacion</h3>
+        <div id="results-list" class="space-y-2">
+            <!-- Items dinamicos -->
+        </div>
+        <div class="mt-4">
+            <a href="/dashboard/compras" class="inline-flex items-center text-ecu-blue hover:underline">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Ver Facturas Importadas
+            </a>
+        </div>
+    </div>
+
+    <!-- Registro manual -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Registro Manual</h3>
+        <p class="text-sm text-gray-600 mb-4">Si no tienes el XML, puedes registrar la factura manualmente.</p>
+        <a href="/dashboard/compras/nueva" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Nueva Factura Manual
+        </a>
+    </div>
+</div>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const previewContainer = document.getElementById('preview-container');
+const previewList = document.getElementById('preview-list');
+const resultsContainer = document.getElementById('results-container');
+const resultsList = document.getElementById('results-list');
+
+let archivosParseados = [];
+
+// Click en dropzone
+dropzone.addEventListener('click', () => fileInput.click());
+
+// Drag events
+dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+});
+
+dropzone.addEventListener('dragleave', () => {
+    dropzone.classList.remove('dragover');
+});
+
+dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    handleFiles(e.dataTransfer.files);
+});
+
+fileInput.addEventListener('change', (e) => {
+    handleFiles(e.target.files);
+});
+
+async function handleFiles(files) {
+    for (const file of files) {
+        if (!file.name.endsWith('.xml')) {
+            alert('Solo se aceptan archivos XML: ' + file.name);
+            continue;
+        }
+
+        const content = await file.text();
+        try {
+            // Enviar al backend para parsear
+            const resp = await fetch('/api/v1/compras/facturas/preview-xml', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/xml'},
+                body: content
+            });
+
+            if (resp.ok) {
+                const data = await resp.json();
+                data._filename = file.name;
+                data._xml_content = content;
+                archivosParseados.push(data);
+                agregarPreview(data);
+            } else {
+                const err = await resp.json();
+                agregarPreviewError(file.name, err.detail || 'Error al parsear');
+            }
+        } catch (err) {
+            agregarPreviewError(file.name, 'Error de conexion');
+        }
+    }
+
+    if (archivosParseados.length > 0) {
+        previewContainer.classList.remove('hidden');
+    }
+}
+
+function agregarPreview(data) {
+    const div = document.createElement('div');
+    div.className = 'preview-item bg-white rounded-lg shadow p-4';
+    div.innerHTML = `
+        <div class="flex justify-between items-start">
+            <div class="flex-1">
+                <div class="flex items-center space-x-3">
+                    <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <p class="font-medium text-gray-900">${data.proveedor_razon_social}</p>
+                        <p class="text-sm text-gray-500">${data.proveedor_ruc} | ${data.establecimiento}-${data.punto_emision}-${data.secuencial}</p>
+                    </div>
+                </div>
+                <div class="mt-3 grid grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <p class="text-gray-500">Fecha</p>
+                        <p class="font-medium">${data.fecha_emision}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Base 15%</p>
+                        <p class="font-medium text-blue-600">$${data.subtotal_15?.toFixed(2) || '0.00'}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">IVA</p>
+                        <p class="font-medium text-blue-600">$${data.iva?.toFixed(2) || '0.00'}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Total</p>
+                        <p class="font-bold text-gray-900">$${data.total?.toFixed(2)}</p>
+                    </div>
+                </div>
+            </div>
+            <button onclick="eliminarPreview('${data.clave_acceso || data._filename}')" class="text-gray-400 hover:text-red-500 ml-4">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    `;
+    previewList.appendChild(div);
+}
+
+function agregarPreviewError(filename, error) {
+    const div = document.createElement('div');
+    div.className = 'preview-item bg-red-50 rounded-lg p-4';
+    div.innerHTML = `
+        <div class="flex items-center space-x-3">
+            <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+                <p class="font-medium text-red-800">${filename}</p>
+                <p class="text-sm text-red-600">${error}</p>
+            </div>
+        </div>
+    `;
+    previewList.appendChild(div);
+}
+
+function eliminarPreview(key) {
+    archivosParseados = archivosParseados.filter(a => (a.clave_acceso || a._filename) !== key);
+    // Reconstruir lista
+    previewList.innerHTML = '';
+    archivosParseados.forEach(agregarPreview);
+    if (archivosParseados.length === 0) {
+        previewContainer.classList.add('hidden');
+    }
+}
+
+function limpiarPreview() {
+    archivosParseados = [];
+    previewList.innerHTML = '';
+    previewContainer.classList.add('hidden');
+}
+
+async function importarTodas() {
+    const btn = document.getElementById('btn-importar');
+    btn.disabled = true;
+    btn.textContent = 'Importando...';
+
+    resultsList.innerHTML = '';
+    resultsContainer.classList.remove('hidden');
+
+    for (const data of archivosParseados) {
+        try {
+            const resp = await fetch('/api/v1/compras/facturas/importar-xml', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/xml'},
+                body: data._xml_content
+            });
+
+            const result = await resp.json();
+
+            if (resp.ok) {
+                agregarResultado(data, true, 'Importada correctamente');
+            } else {
+                agregarResultado(data, false, result.detail || 'Error desconocido');
+            }
+        } catch (err) {
+            agregarResultado(data, false, 'Error de conexion');
+        }
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Importar Todas';
+    limpiarPreview();
+}
+
+function agregarResultado(data, success, message) {
+    const div = document.createElement('div');
+    div.className = `p-3 rounded ${success ? 'bg-green-50' : 'bg-red-50'}`;
+    div.innerHTML = `
+        <div class="flex items-center space-x-2">
+            <svg class="w-5 h-5 ${success ? 'text-green-500' : 'text-red-500'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${success ? 'M5 13l4 4L19 7' : 'M6 18L18 6M6 6l12 12'}"></path>
+            </svg>
+            <span class="${success ? 'text-green-800' : 'text-red-800'}">
+                <strong>${data.establecimiento}-${data.punto_emision}-${data.secuencial}</strong> - ${data.proveedor_razon_social?.substring(0, 30) || 'Proveedor'}
+            </span>
+            <span class="text-sm ${success ? 'text-green-600' : 'text-red-600'}">${message}</span>
+        </div>
+    `;
+    resultsList.appendChild(div);
+}
+</script>
+{% endblock %}

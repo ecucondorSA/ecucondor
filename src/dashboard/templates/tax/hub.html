@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800">Centro de Impuestos</h1>
+        <div class="text-sm text-gray-500">RUC: {{ ruc }}</div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Calendario Tributario -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                        </path>
+                    </svg>
+                    Calendario de Vencimientos
+                </h2>
+                <div class="space-y-4">
+                    {% for obl in obligaciones %}
+                    <div
+                        class="border-l-4 {% if obl.prioridad == 'alta' %}border-red-500{% else %}border-blue-500{% endif %} bg-gray-50 p-4 rounded-r-lg">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-gray-800">{{ obl.nombre }}</h3>
+                                <p class="text-sm text-gray-600">{{ obl.descripcion }}</p>
+                            </div>
+                            <div class="text-right">
+                                <span
+                                    class="block text-sm font-semibold {% if obl.prioridad == 'alta' %}text-red-600{% else %}text-blue-600{% endif %}">
+                                    Vence: {{ obl.display_date }}
+                                </span>
+                                <span class="text-xs text-gray-500">{{ obl.vencimiento }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-gray-500">No hay obligaciones próximas identificadas.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Generador ATS y Enlaces -->
+        <div class="space-y-8">
+            <!-- Generador ATS -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                    Generador ATS
+                </h2>
+                <form action="/dashboard/api/ats/generate" method="POST" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Año</label>
+                        <select name="anio"
+                            class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <option value="{{ anio_actual }}" selected>{{ anio_actual }}</option>
+                            <option value="{{ anio_actual - 1 }}">{{ anio_actual - 1 }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Mes</label>
+                        <select name="mes"
+                            class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            {% for i in range(1, 13) %}
+                            <option value="{{ i }}" {% if i==mes_actual - 1 %}selected{% endif %}>{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition duration-200 flex justify-center items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        Generar XML
+                    </button>
+                </form>
+            </div>
+
+            <!-- Enlace SRI -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-blue-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                    </svg>
+                    Portal SRI
+                </h2>
+                <p class="text-sm text-gray-600 mb-4">Acceso directo para carga de anexos y declaraciones.</p>
+                <a href="{{ sri_link }}" target="_blank"
+                    class="block w-full bg-blue-800 text-white text-center py-2 px-4 rounded-md hover:bg-blue-900 transition duration-200">
+                    Ir al SRI en Línea
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

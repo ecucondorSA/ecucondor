@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Formulario 104 - IVA{% endblock %}
+{% block header_title %}Declaracion Mensual de IVA{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+    <!-- Header con selector de periodo -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h2 class="text-xl font-semibold text-gray-800">Formulario 104 - IVA Mensual</h2>
+            <p class="text-sm text-gray-500">Datos para declaracion SRI</p>
+        </div>
+        <form method="GET" class="flex items-center space-x-2">
+            <select name="anio" class="border-gray-300 rounded text-sm">
+                {% for a in range(2024, 2027) %}
+                <option value="{{ a }}" {% if a == anio %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+            <select name="mes" class="border-gray-300 rounded text-sm">
+                {% set meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+                'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] %}
+                {% for m in range(1, 13) %}
+                <option value="{{ m }}" {% if m == mes %}selected{% endif %}>{{ meses[m-1] }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                Consultar
+            </button>
+        </form>
+    </div>
+
+    <!-- Tarjetas de resumen -->
+    <div class="grid grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-sm text-gray-500">Total Ventas</p>
+            <p class="text-2xl font-bold text-gray-800">${{ '{:,.2f}'.format(datos.ventas['415_total_ventas_netas']) }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-sm text-gray-500">Total Compras</p>
+            <p class="text-2xl font-bold text-gray-800">${{ '{:,.2f}'.format(datos.compras['513_total_adquisiciones']) }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-sm text-gray-500">IVA Ventas</p>
+            <p class="text-2xl font-bold text-green-600">${{ '{:,.2f}'.format(datos.impuestos['601_iva_ventas']) }}</p>
+        </div>
+        <div class="bg-{% if datos.impuestos['721_iva_a_pagar'] > 0 %}red{% else %}blue{% endif %}-50 rounded-lg shadow-sm p-4 border-2 border-{% if datos.impuestos['721_iva_a_pagar'] > 0 %}red{% else %}blue{% endif %}-400">
+            <p class="text-sm text-gray-500">{% if datos.impuestos['721_iva_a_pagar'] > 0 %}IVA a Pagar{% else %}Credito Tributario{% endif %}</p>
+            <p class="text-2xl font-bold text-{% if datos.impuestos['721_iva_a_pagar'] > 0 %}red{% else %}blue{% endif %}-600">
+                ${{ '{:,.2f}'.format(datos.impuestos['721_iva_a_pagar'] if datos.impuestos['721_iva_a_pagar'] > 0 else datos.impuestos['723_credito_proximo_mes']) }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Seccion VENTAS (400) -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="bg-green-600 text-white px-4 py-3 font-semibold">
+            VENTAS Y OTRAS OPERACIONES (CASILLEROS 400)
+        </div>
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-20">Casillero</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-40">Valor</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                <tr>
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">401</td>
+                    <td class="px-4 py-3 text-sm">Ventas locales (excluye activos fijos) gravadas tarifa diferente de 0%</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">${{ '{:,.2f}'.format(datos.ventas['401_ventas_locales_gravadas']) }}</td>
+                </tr>
+                <tr class="bg-gray-50">
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">403</td>
+                    <td class="px-4 py-3 text-sm">Ventas de activos fijos gravadas tarifa diferente de 0%</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">${{ '{:,.2f}'.format(datos.ventas['403_ventas_activos_fijos_gravadas']) }}</td>
+                </tr>
+                <tr>
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">405</td>
+                    <td class="px-4 py-3 text-sm">Ventas locales (excluye activos fijos) gravadas tarifa 0%</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">${{ '{:,.2f}'.format(datos.ventas['405_ventas_locales_0']) }}</td>
+                </tr>
+                <tr class="bg-gray-50">
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">407</td>
+                    <td class="px-4 py-3 text-sm">Ventas activos fijos gravadas tarifa 0%</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">${{ '{:,.2f}'.format(datos.ventas['407_ventas_activos_fijos_0']) }}</td>
+                </tr>
+                <tr>
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">409</td>
+                    <td class="px-4 py-3 text-sm">Exportaciones de bienes</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">${{ '{:,.2f}'.format(datos.ventas['409_exportaciones_bienes']) }}</td>
+                </tr>
+                <tr class="bg-gray-50">
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">411</td>
+                    <td class="px-4 py-3 text-sm">Exportaciones de servicios</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">${{ '{:,.2f}'.format(datos.ventas['411_exportaciones_servicios']) }}</td>
+                </tr>
+                <tr>
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">413</td>
+                    <td class="px-4 py-3 text-sm">Ventas a las que se aplico retencion de IVA</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">${{ '{:,.2f}'.format(datos.ventas['413_ventas_con_retencion']) }}</td>
+                </tr>
+                <tr class="bg-green-100 font-bold">
+                    <td class="px-4 py-3 font-mono text-sm text-green-800">415</td>
+                    <td class="px-4 py-3 text-sm text-green-800">TOTAL VENTAS Y EXPORTACIONES NETAS</td>
+                    <td class="px-4 py-3 text-right font-mono text-green-800">${{ '{:,.2f}'.format(datos.ventas['415_total_ventas_netas']) }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Seccion COMPRAS (500) -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="bg-blue-600 text-white px-4 py-3 font-semibold">
+            ADQUISICIONES Y PAGOS (CASILLEROS 500)
+        </div>
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-20">Casillero</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-40">Valor</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                <tr>
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">501</td>
+                    <td class="px-4 py-3 text-sm">Compras locales gravadas tarifa diferente 0% (excluye activos fijos)</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">${{ '{:,.2f}'.format(datos.compras['501_compras_locales_gravadas']) }}</td>
+                </tr>
+                <tr class="bg-gray-50">
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">503</td>
+                    <td class="px-4 py-3 text-sm">Compras de activos fijos gravadas tarifa diferente 0%</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">${{ '{:,.2f}'.format(datos.compras['503_compras_activos_fijos_gravadas']) }}</td>
+                </tr>
+                <tr>
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">505</td>
+                    <td class="px-4 py-3 text-sm">Compras locales gravadas tarifa 0%</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">${{ '{:,.2f}'.format(datos.compras['505_compras_locales_0']) }}</td>
+                </tr>
+                <tr class="bg-gray-50">
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">507</td>
+                    <td class="px-4 py-3 text-sm">Importaciones de bienes (excluye activos fijos)</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">${{ '{:,.2f}'.format(datos.compras['507_importaciones_bienes']) }}</td>
+                </tr>
+                <tr>
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">509</td>
+                    <td class="px-4 py-3 text-sm">Importaciones de activos fijos</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">${{ '{:,.2f}'.format(datos.compras['509_importaciones_activos_fijos']) }}</td>
+                </tr>
+                <tr class="bg-gray-50">
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">511</td>
+                    <td class="px-4 py-3 text-sm">Importaciones tarifa 0%</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">${{ '{:,.2f}'.format(datos.compras['511_importaciones_0']) }}</td>
+                </tr>
+                <tr class="bg-blue-100 font-bold">
+                    <td class="px-4 py-3 font-mono text-sm text-blue-800">513</td>
+                    <td class="px-4 py-3 text-sm text-blue-800">TOTAL ADQUISICIONES Y PAGOS</td>
+                    <td class="px-4 py-3 text-right font-mono text-blue-800">${{ '{:,.2f}'.format(datos.compras['513_total_adquisiciones']) }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Seccion RESUMEN IMPOSITIVO (600) -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="bg-yellow-600 text-white px-4 py-3 font-semibold">
+            RESUMEN IMPOSITIVO (CASILLEROS 600+)
+        </div>
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-20">Casillero</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-40">Valor</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                <tr class="bg-green-50">
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">601</td>
+                    <td class="px-4 py-3 text-sm">IVA causado en ventas (15%)</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium text-green-700">${{ '{:,.2f}'.format(datos.impuestos['601_iva_ventas']) }}</td>
+                </tr>
+                <tr>
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">605</td>
+                    <td class="px-4 py-3 text-sm">(-) IVA pagado en compras</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium text-red-600">${{ '{:,.2f}'.format(datos.impuestos['605_iva_compras']) }}</td>
+                </tr>
+                <tr class="bg-gray-50">
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">609</td>
+                    <td class="px-4 py-3 text-sm">(-) IVA pagado en importaciones</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium text-red-600">${{ '{:,.2f}'.format(datos.impuestos['609_iva_importaciones']) }}</td>
+                </tr>
+                <tr>
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">699</td>
+                    <td class="px-4 py-3 text-sm">(-) Credito tributario del mes</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">${{ '{:,.2f}'.format(datos.impuestos['credito_tributario_mes']) }}</td>
+                </tr>
+                <tr class="bg-gray-50">
+                    <td class="px-4 py-3 font-mono text-sm text-gray-600">-</td>
+                    <td class="px-4 py-3 text-sm">(-) Credito tributario meses anteriores</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium">${{ '{:,.2f}'.format(datos.impuestos['credito_tributario_anterior']) }}</td>
+                </tr>
+                {% if datos.impuestos['721_iva_a_pagar'] > 0 %}
+                <tr class="bg-red-100 font-bold">
+                    <td class="px-4 py-3 font-mono text-sm text-red-800">721</td>
+                    <td class="px-4 py-3 text-sm text-red-800">IVA A PAGAR</td>
+                    <td class="px-4 py-3 text-right font-mono text-red-800">${{ '{:,.2f}'.format(datos.impuestos['721_iva_a_pagar']) }}</td>
+                </tr>
+                {% else %}
+                <tr class="bg-blue-100 font-bold">
+                    <td class="px-4 py-3 font-mono text-sm text-blue-800">723</td>
+                    <td class="px-4 py-3 text-sm text-blue-800">CREDITO TRIBUTARIO PROXIMO MES</td>
+                    <td class="px-4 py-3 text-right font-mono text-blue-800">${{ '{:,.2f}'.format(datos.impuestos['723_credito_proximo_mes']) }}</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Estadisticas -->
+    <div class="bg-white rounded-lg shadow-sm p-4">
+        <h3 class="text-lg font-medium text-gray-800 mb-4">Estadisticas del Periodo</h3>
+        <div class="grid grid-cols-2 gap-4">
+            <div class="flex items-center">
+                <svg class="w-8 h-8 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <div>
+                    <p class="text-2xl font-bold text-gray-800">{{ datos.estadisticas['total_facturas_emitidas'] }}</p>
+                    <p class="text-sm text-gray-500">Facturas Emitidas</p>
+                </div>
+            </div>
+            <div class="flex items-center">
+                <svg class="w-8 h-8 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div>
+                    <p class="text-2xl font-bold text-gray-800">{{ datos.estadisticas['total_facturas_anuladas'] }}</p>
+                    <p class="text-sm text-gray-500">Facturas Anuladas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="flex justify-end space-x-4">
+        <a href="/dashboard/impuestos/form-104/imprimir?anio={{ anio }}&mes={{ mes }}" target="_blank"
+           class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+            </svg>
+            Imprimir para SRI
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Asientos Contables{% endblock %}
+{% block header_title %}Asientos Contables{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header con acciones -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h2 class="text-xl font-semibold text-gray-800">Libro Diario</h2>
+            <p class="text-sm text-gray-500">Gestion de asientos contables manuales</p>
+        </div>
+        <a href="/dashboard/contabilidad/asientos/nuevo"
+           class="bg-ecu-blue text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Nuevo Asiento
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white rounded-lg shadow-sm p-4">
+        <form method="GET" class="flex items-center space-x-4">
+            <div>
+                <label class="text-sm text-gray-600">Periodo:</label>
+                <select name="anio" class="ml-2 border-gray-300 rounded text-sm">
+                    {% for a in range(2024, 2027) %}
+                    <option value="{{ a }}" {% if a==periodo.anio %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+                <select name="mes" class="ml-1 border-gray-300 rounded text-sm">
+                    {% set meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+                    'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] %}
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if m==periodo.mes %}selected{% endif %}>{{ meses[m-1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="text-sm text-gray-600">Estado:</label>
+                <select name="estado" class="ml-2 border-gray-300 rounded text-sm">
+                    <option value="">Todos</option>
+                    <option value="borrador" {% if estado_filtro=='borrador' %}selected{% endif %}>Borrador</option>
+                    <option value="contabilizado" {% if estado_filtro=='contabilizado' %}selected{% endif %}>Contabilizado</option>
+                    <option value="anulado" {% if estado_filtro=='anulado' %}selected{% endif %}>Anulado</option>
+                </select>
+            </div>
+            <button type="submit" class="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 transition">
+                Filtrar
+            </button>
+        </form>
+    </div>
+
+    <!-- Resumen -->
+    <div class="grid grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+            <p class="text-2xl font-bold text-gray-800">{{ stats.total }}</p>
+            <p class="text-sm text-gray-500">Total Asientos</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+            <p class="text-2xl font-bold text-green-600">{{ stats.contabilizados }}</p>
+            <p class="text-sm text-gray-500">Contabilizados</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+            <p class="text-2xl font-bold text-yellow-600">{{ stats.borradores }}</p>
+            <p class="text-sm text-gray-500">Borradores</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+            <p class="text-2xl font-bold text-blue-600">${{ '{:,.2f}'.format(stats.total_movimiento) }}</p>
+            <p class="text-sm text-gray-500">Total Movimiento</p>
+        </div>
+    </div>
+
+    <!-- Tabla de Asientos -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Debe</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Haber</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for asiento in asientos %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm font-mono text-gray-500">{{ asiento.numero_asiento }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-900">{{ asiento.fecha }}</td>
+                    <td class="px-4 py-3 text-sm">
+                        <div class="font-medium text-gray-900">{{ asiento.concepto[:50] }}{% if asiento.concepto|length > 50 %}...{% endif %}</div>
+                        {% if asiento.referencia %}
+                        <div class="text-xs text-gray-500">Ref: {{ asiento.referencia }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-sm">
+                        <span class="px-2 py-1 text-xs rounded
+                            {% if asiento.tipo == 'normal' %}bg-gray-100 text-gray-800
+                            {% elif asiento.tipo == 'ajuste' %}bg-purple-100 text-purple-800
+                            {% elif asiento.tipo == 'automatico' %}bg-blue-100 text-blue-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ asiento.tipo|capitalize }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-right font-mono text-green-700">${{ '{:,.2f}'.format(asiento.total_debe) }}</td>
+                    <td class="px-4 py-3 text-sm text-right font-mono text-red-700">${{ '{:,.2f}'.format(asiento.total_haber) }}</td>
+                    <td class="px-4 py-3 text-center">
+                        {% if asiento.estado == 'borrador' %}
+                        <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800">Borrador</span>
+                        {% elif asiento.estado == 'contabilizado' %}
+                        <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">Contabilizado</span>
+                        {% elif asiento.estado == 'anulado' %}
+                        <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-800">Anulado</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex justify-center space-x-2">
+                            <a href="/dashboard/contabilidad/asientos/{{ asiento.id }}"
+                               class="text-blue-600 hover:text-blue-800" title="Ver detalle">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </a>
+                            {% if asiento.estado == 'borrador' %}
+                            <button onclick="contabilizarAsiento('{{ asiento.id }}')"
+                                    class="text-green-600 hover:text-green-800" title="Contabilizar">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </button>
+                            {% endif %}
+                            {% if asiento.estado == 'contabilizado' %}
+                            <button onclick="anularAsiento('{{ asiento.id }}')"
+                                    class="text-red-600 hover:text-red-800" title="Anular">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                        No se encontraron asientos en este periodo.
+                        <a href="/dashboard/contabilidad/asientos/nuevo" class="text-ecu-blue hover:underline ml-2">Crear nuevo asiento</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+async function contabilizarAsiento(id) {
+    if (!confirm('Contabilizar este asiento? Una vez contabilizado no podra editarse.')) return;
+
+    try {
+        const resp = await fetch(`/api/v1/ledger/asientos/${id}/contabilizar`, {
+            method: 'POST'
+        });
+
+        if (resp.ok) {
+            alert('Asiento contabilizado exitosamente');
+            window.location.reload();
+        } else {
+            const err = await resp.json();
+            alert('Error: ' + (err.detail || 'No se pudo contabilizar'));
+        }
+    } catch (err) {
+        alert('Error de conexion');
+    }
+}
+
+async function anularAsiento(id) {
+    const motivo = prompt('Motivo de anulacion:');
+    if (!motivo) return;
+
+    try {
+        const resp = await fetch(`/api/v1/ledger/asientos/${id}/anular`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({motivo: motivo})
+        });
+
+        if (resp.ok) {
+            alert('Asiento anulado exitosamente');
+            window.location.reload();
+        } else {
+            const err = await resp.json();
+            alert('Error: ' + (err.detail || 'No se pudo anular'));
+        }
+    } catch (err) {
+        alert('Error de conexion');
+    }
+}
+</script>
+{% endblock %}

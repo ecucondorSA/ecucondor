@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block header_title %}Balance General{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+    <!-- Header del Reporte -->
+    <div class="text-center mb-8 border-b pb-4">
+        <h2 class="text-2xl font-bold text-gray-800">{{ empresa.razon_social }}</h2>
+        <h3 class="text-xl text-gray-600 mt-1">Estado de Situacion Financiera</h3>
+        <p class="text-gray-500 mt-1">Al {{ fecha_corte.strftime('%d de %B de %Y') }}</p>
+    </div>
+
+    <!-- Filtros y Exportar -->
+    <div class="mb-6 flex justify-between items-center">
+        <!-- Botones de Exportacion -->
+        <div class="flex space-x-2">
+            <a href="/dashboard/reportes/balance/pdf?anio={{ periodo.anio }}&mes={{ periodo.mes }}"
+               class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                PDF
+            </a>
+            <a href="/dashboard/reportes/balance/excel?anio={{ periodo.anio }}&mes={{ periodo.mes }}"
+               class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md text-sm hover:bg-green-700 transition">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Excel
+            </a>
+        </div>
+        <!-- Filtros -->
+        <form method="GET" class="flex items-center space-x-2 bg-gray-50 p-2 rounded-lg">
+            <span class="text-sm text-gray-600 font-medium">Fecha de Corte:</span>
+            <select name="anio" class="border-gray-300 rounded-md text-sm focus:ring-ecu-blue focus:border-ecu-blue">
+                {% for a in range(2024, 2027) %}
+                <option value="{{ a }}" {% if a==periodo.anio %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+            <select name="mes" class="border-gray-300 rounded-md text-sm focus:ring-ecu-blue focus:border-ecu-blue">
+                {% set meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+                'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] %}
+                {% for m in range(1, 13) %}
+                <option value="{{ m }}" {% if m==periodo.mes %}selected{% endif %}>{{ meses[m-1] }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit"
+                class="bg-ecu-blue text-white px-4 py-2 rounded-md text-sm hover:bg-blue-800 transition">
+                Ver Reporte
+            </button>
+        </form>
+    </div>
+
+    <!-- Contenido del Reporte -->
+    <div class="space-y-8 font-mono text-sm">
+        <!-- Activos -->
+        <div>
+            <h4 class="text-lg font-bold text-gray-800 border-b-2 border-gray-200 mb-4 pb-2">ACTIVOS</h4>
+            <table class="w-full">
+                <tbody>
+                    {% for linea in balance.activos.lineas %}
+                    <tr class="hover:bg-gray-50 {% if not linea.es_titulo %}cursor-pointer{% endif %}"
+                        {% if not linea.es_titulo %}onclick="window.location.href='/dashboard/reportes/libro-mayor/{{ linea.codigo }}?anio={{ periodo.anio }}&mes={{ periodo.mes }}'"{% endif %}>
+                        <td class="py-1 pl-{{ (linea.nivel - 1) * 4 }} pr-4 w-32">
+                            {% if not linea.es_titulo %}
+                            <a href="/dashboard/reportes/libro-mayor/{{ linea.codigo }}?anio={{ periodo.anio }}&mes={{ periodo.mes }}"
+                               class="text-ecu-blue hover:underline font-mono">{{ linea.codigo }}</a>
+                            {% else %}
+                            <span class="text-gray-600">{{ linea.codigo }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-1 pl-{{ (linea.nivel - 1) * 4 }} pr-4 font-medium text-gray-800">{{ linea.nombre }}</td>
+                        <td class="py-1 text-right w-40">
+                            {% if not linea.es_titulo %}
+                            {{ linea.formato_saldo() }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="bg-gray-100 font-bold">
+                        <td colspan="2" class="py-2 pl-4">TOTAL ACTIVOS</td>
+                        <td class="py-2 text-right pr-4">${{ "%.2f"|format(balance.total_activos) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pasivos -->
+        <div>
+            <h4 class="text-lg font-bold text-gray-800 border-b-2 border-gray-200 mb-4 pb-2">PASIVOS</h4>
+            <table class="w-full">
+                <tbody>
+                    {% for linea in balance.pasivos.lineas %}
+                    <tr class="hover:bg-gray-50 {% if not linea.es_titulo %}cursor-pointer{% endif %}"
+                        {% if not linea.es_titulo %}onclick="window.location.href='/dashboard/reportes/libro-mayor/{{ linea.codigo }}?anio={{ periodo.anio }}&mes={{ periodo.mes }}'"{% endif %}>
+                        <td class="py-1 pl-{{ (linea.nivel - 1) * 4 }} pr-4 w-32">
+                            {% if not linea.es_titulo %}
+                            <a href="/dashboard/reportes/libro-mayor/{{ linea.codigo }}?anio={{ periodo.anio }}&mes={{ periodo.mes }}"
+                               class="text-ecu-blue hover:underline font-mono">{{ linea.codigo }}</a>
+                            {% else %}
+                            <span class="text-gray-600">{{ linea.codigo }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-1 pl-{{ (linea.nivel - 1) * 4 }} pr-4 font-medium text-gray-800">{{ linea.nombre }}</td>
+                        <td class="py-1 text-right w-40">
+                            {% if not linea.es_titulo %}
+                            {{ linea.formato_saldo() }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="bg-gray-100 font-bold">
+                        <td colspan="2" class="py-2 pl-4">TOTAL PASIVOS</td>
+                        <td class="py-2 text-right pr-4">${{ "%.2f"|format(balance.total_pasivos) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Patrimonio -->
+        <div>
+            <h4 class="text-lg font-bold text-gray-800 border-b-2 border-gray-200 mb-4 pb-2">PATRIMONIO</h4>
+            <table class="w-full">
+                <tbody>
+                    {% for linea in balance.patrimonio.lineas %}
+                    <tr class="hover:bg-gray-50 {% if not linea.es_titulo %}cursor-pointer{% endif %}"
+                        {% if not linea.es_titulo %}onclick="window.location.href='/dashboard/reportes/libro-mayor/{{ linea.codigo }}?anio={{ periodo.anio }}&mes={{ periodo.mes }}'"{% endif %}>
+                        <td class="py-1 pl-{{ (linea.nivel - 1) * 4 }} pr-4 w-32">
+                            {% if not linea.es_titulo %}
+                            <a href="/dashboard/reportes/libro-mayor/{{ linea.codigo }}?anio={{ periodo.anio }}&mes={{ periodo.mes }}"
+                               class="text-ecu-blue hover:underline font-mono">{{ linea.codigo }}</a>
+                            {% else %}
+                            <span class="text-gray-600">{{ linea.codigo }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-1 pl-{{ (linea.nivel - 1) * 4 }} pr-4 font-medium text-gray-800">{{ linea.nombre }}</td>
+                        <td class="py-1 text-right w-40">
+                            {% if not linea.es_titulo %}
+                            {{ linea.formato_saldo() }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="bg-gray-100 font-bold">
+                        <td colspan="2" class="py-2 pl-4">TOTAL PATRIMONIO</td>
+                        <td class="py-2 text-right pr-4">${{ "%.2f"|format(balance.total_patrimonio) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Resumen Final -->
+        <div class="mt-8 pt-4 border-t-2 border-gray-800">
+            <div class="flex justify-between items-center text-lg font-bold">
+                <span>TOTAL PASIVO + PATRIMONIO</span>
+                <span>${{ "%.2f"|format(balance.pasivo_mas_patrimonio) }}</span>
+            </div>
+
+            <div
+                class="mt-4 p-4 rounded-lg {% if balance.esta_cuadrado %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %} text-center font-bold">
+                {% if balance.esta_cuadrado %}
+                ESTADO: CUADRADO
+                {% else %}
+                ESTADO: DESCUADRADO (Diferencia: ${{ "%.2f"|format(balance.total_activos -
+                balance.pasivo_mas_patrimonio) }})
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

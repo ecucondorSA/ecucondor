@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Transacciones Bancarias{% endblock %}
+{% block header_title %}Transacciones Bancarias{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header con acciones -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h2 class="text-xl font-semibold text-gray-800">Movimientos Bancarios</h2>
+            <p class="text-sm text-gray-500">Gestion y conciliacion de transacciones</p>
+        </div>
+        <div class="flex space-x-2">
+            <button onclick="abrirImportar()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                Importar CSV
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white rounded-lg shadow-sm p-4">
+        <form method="GET" class="flex items-center space-x-4">
+            <div>
+                <label class="text-sm text-gray-600">Periodo:</label>
+                <select name="anio" class="ml-2 border-gray-300 rounded text-sm">
+                    {% for a in range(2024, 2027) %}
+                    <option value="{{ a }}" {% if a==periodo.anio %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+                <select name="mes" class="ml-1 border-gray-300 rounded text-sm">
+                    {% set meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+                    'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] %}
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if m==periodo.mes %}selected{% endif %}>{{ meses[m-1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="text-sm text-gray-600">Estado:</label>
+                <select name="estado" class="ml-2 border-gray-300 rounded text-sm">
+                    <option value="">Todos</option>
+                    <option value="pendiente" {% if estado_filtro=='pendiente' %}selected{% endif %}>Pendiente</option>
+                    <option value="conciliado" {% if estado_filtro=='conciliado' %}selected{% endif %}>Conciliado</option>
+                    <option value="contabilizado" {% if estado_filtro=='contabilizado' %}selected{% endif %}>Contabilizado</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm text-gray-600">Tipo:</label>
+                <select name="tipo" class="ml-2 border-gray-300 rounded text-sm">
+                    <option value="">Todos</option>
+                    <option value="credito" {% if tipo_filtro=='credito' %}selected{% endif %}>Creditos</option>
+                    <option value="debito" {% if tipo_filtro=='debito' %}selected{% endif %}>Debitos</option>
+                </select>
+            </div>
+            <button type="submit" class="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 transition">
+                Filtrar
+            </button>
+        </form>
+    </div>
+
+    <!-- Resumen -->
+    <div class="grid grid-cols-5 gap-4">
+        <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+            <p class="text-2xl font-bold text-gray-800">{{ stats.total }}</p>
+            <p class="text-sm text-gray-500">Transacciones</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+            <p class="text-2xl font-bold text-green-600">${{ '{:,.2f}'.format(stats.creditos) }}</p>
+            <p class="text-sm text-gray-500">Creditos</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+            <p class="text-2xl font-bold text-red-600">${{ '{:,.2f}'.format(stats.debitos) }}</p>
+            <p class="text-sm text-gray-500">Debitos</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+            <p class="text-2xl font-bold text-blue-600">${{ '{:,.2f}'.format(stats.neto) }}</p>
+            <p class="text-sm text-gray-500">Neto</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+            <p class="text-2xl font-bold text-yellow-600">{{ stats.pendientes }}</p>
+            <p class="text-sm text-gray-500">Pendientes</p>
+        </div>
+    </div>
+
+    <!-- Tabla de Transacciones -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripcion</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Referencia</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for tx in transacciones %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm text-gray-900">{{ tx.fecha }}</td>
+                    <td class="px-4 py-3 text-sm">
+                        <div class="font-medium text-gray-900">{{ tx.descripcion[:50] }}{% if tx.descripcion|length > 50 %}...{% endif %}</div>
+                        {% if tx.beneficiario %}
+                        <div class="text-xs text-gray-500">{{ tx.beneficiario }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500 font-mono">{{ tx.referencia or '-' }}</td>
+                    <td class="px-4 py-3 text-sm text-right">
+                        {% if tx.tipo == 'credito' %}
+                        <span class="font-medium text-green-700">+${{ '{:,.2f}'.format(tx.monto) }}</span>
+                        {% else %}
+                        <span class="font-medium text-red-700">-${{ '{:,.2f}'.format(tx.monto) }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        {% if tx.estado == 'pendiente' %}
+                        <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800">Pendiente</span>
+                        {% elif tx.estado == 'conciliado' %}
+                        <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">Conciliado</span>
+                        {% elif tx.estado == 'contabilizado' %}
+                        <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">Contabilizado</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex justify-center space-x-2">
+                            {% if tx.estado == 'pendiente' %}
+                            <button onclick="conciliar('{{ tx.id }}')" class="text-blue-600 hover:text-blue-800" title="Conciliar">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </button>
+                            {% endif %}
+                            {% if tx.estado == 'conciliado' %}
+                            <button onclick="contabilizar('{{ tx.id }}')" class="text-green-600 hover:text-green-800" title="Contabilizar">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                        No se encontraron transacciones en este periodo.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Importar CSV -->
+<div id="modalImportar" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+        <h3 class="text-lg font-semibold mb-4">Importar Transacciones</h3>
+        <form id="formImportar" enctype="multipart/form-data">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Archivo CSV</label>
+                <input type="file" name="archivo" accept=".csv" required
+                       class="w-full border border-gray-300 rounded p-2">
+                <p class="text-xs text-gray-500 mt-1">Formato: fecha, descripcion, referencia, monto, tipo</p>
+            </div>
+            <div class="flex justify-end space-x-2">
+                <button type="button" onclick="cerrarImportar()" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                    Importar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function abrirImportar() {
+    document.getElementById('modalImportar').classList.remove('hidden');
+}
+
+function cerrarImportar() {
+    document.getElementById('modalImportar').classList.add('hidden');
+}
+
+document.getElementById('formImportar').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+
+    try {
+        const resp = await fetch('/api/v1/transactions/importar', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (resp.ok) {
+            const result = await resp.json();
+            alert('Importacion exitosa: ' + result.count + ' transacciones');
+            window.location.reload();
+        } else {
+            const err = await resp.json();
+            alert('Error: ' + (err.detail || 'No se pudo importar'));
+        }
+    } catch (err) {
+        alert('Error de conexion');
+    }
+});
+
+async function conciliar(id) {
+    if (!confirm('Marcar esta transaccion como conciliada?')) return;
+
+    try {
+        const resp = await fetch(`/api/v1/transactions/${id}/conciliar`, {
+            method: 'POST'
+        });
+
+        if (resp.ok) {
+            window.location.reload();
+        } else {
+            const err = await resp.json();
+            alert('Error: ' + (err.detail || 'No se pudo conciliar'));
+        }
+    } catch (err) {
+        alert('Error de conexion');
+    }
+}
+
+async function contabilizar(id) {
+    if (!confirm('Contabilizar esta transaccion?')) return;
+
+    try {
+        const resp = await fetch(`/api/v1/transactions/${id}/contabilizar`, {
+            method: 'POST'
+        });
+
+        if (resp.ok) {
+            alert('Transaccion contabilizada');
+            window.location.reload();
+        } else {
+            const err = await resp.json();
+            alert('Error: ' + (err.detail || 'No se pudo contabilizar'));
+        }
+    } catch (err) {
+        alert('Error de conexion');
+    }
+}
+</script>
+{% endblock %}

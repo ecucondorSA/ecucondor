@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block header_title %}Libro Mayor - {{ cuenta_codigo }}{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+    <!-- Header del Reporte -->
+    <div class="text-center mb-8 border-b pb-4">
+        <h2 class="text-2xl font-bold text-gray-800">{{ empresa.razon_social }}</h2>
+        <h3 class="text-xl text-gray-600 mt-1">Libro Mayor</h3>
+        <div class="mt-3 p-3 bg-blue-50 rounded-lg inline-block">
+            <span class="text-blue-800 font-mono font-bold text-lg">{{ cuenta_codigo }}</span>
+            <span class="text-blue-600 ml-2">{{ cuenta_nombre }}</span>
+        </div>
+        <p class="text-gray-500 mt-2">
+            Del {{ fecha_inicio.strftime('%d/%m/%Y') }} al {{ fecha_fin.strftime('%d/%m/%Y') }}
+        </p>
+    </div>
+
+    <!-- Navegacion -->
+    <div class="mb-4">
+        <a href="/dashboard/reportes/balance?anio={{ periodo.anio }}&mes={{ periodo.mes }}"
+            class="text-ecu-blue hover:underline">
+            &larr; Volver al Balance General
+        </a>
+    </div>
+
+    <!-- Filtros y Exportar -->
+    <div class="mb-6 flex justify-between items-center">
+        <!-- Boton de Exportacion -->
+        <div class="flex space-x-2">
+            <a href="/dashboard/reportes/libro-mayor/{{ cuenta_codigo }}/excel?anio={{ periodo.anio }}&mes={{ periodo.mes }}"
+               class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md text-sm hover:bg-green-700 transition">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Exportar Excel
+            </a>
+        </div>
+        <!-- Filtros -->
+        <form method="GET" class="flex items-center space-x-2 bg-gray-50 p-2 rounded-lg">
+            <span class="text-sm text-gray-600 font-medium">Periodo:</span>
+            <select name="anio" class="border-gray-300 rounded-md text-sm focus:ring-ecu-blue focus:border-ecu-blue">
+                {% for a in range(2024, 2027) %}
+                <option value="{{ a }}" {% if a==periodo.anio %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+            <select name="mes" class="border-gray-300 rounded-md text-sm focus:ring-ecu-blue focus:border-ecu-blue">
+                {% set meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+                'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] %}
+                {% for m in range(1, 13) %}
+                <option value="{{ m }}" {% if m==periodo.mes %}selected{% endif %}>{{ meses[m-1] }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit"
+                class="bg-ecu-blue text-white px-4 py-2 rounded-md text-sm hover:bg-blue-800 transition">
+                Ver
+            </button>
+        </form>
+    </div>
+
+    <!-- Resumen -->
+    <div class="grid grid-cols-4 gap-4 mb-6">
+        <div class="bg-gray-50 p-4 rounded-lg text-center">
+            <p class="text-sm text-gray-500">Saldo Inicial</p>
+            <p class="text-xl font-bold text-gray-800">${{ "%.2f"|format(libro.saldo_inicial) }}</p>
+        </div>
+        <div class="bg-green-50 p-4 rounded-lg text-center">
+            <p class="text-sm text-green-600">Total Debe</p>
+            <p class="text-xl font-bold text-green-800">${{ "%.2f"|format(libro.total_debe) }}</p>
+        </div>
+        <div class="bg-red-50 p-4 rounded-lg text-center">
+            <p class="text-sm text-red-600">Total Haber</p>
+            <p class="text-xl font-bold text-red-800">${{ "%.2f"|format(libro.total_haber) }}</p>
+        </div>
+        <div class="bg-blue-50 p-4 rounded-lg text-center">
+            <p class="text-sm text-blue-600">Saldo Final</p>
+            <p class="text-xl font-bold text-blue-800">${{ "%.2f"|format(libro.saldo_final) }}</p>
+        </div>
+    </div>
+
+    <!-- Tabla de Movimientos -->
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="px-4 py-3 text-left text-gray-600 font-semibold">Fecha</th>
+                    <th class="px-4 py-3 text-left text-gray-600 font-semibold">#</th>
+                    <th class="px-4 py-3 text-left text-gray-600 font-semibold">Concepto</th>
+                    <th class="px-4 py-3 text-left text-gray-600 font-semibold">Contrapartida</th>
+                    <th class="px-4 py-3 text-right text-gray-600 font-semibold">Debe</th>
+                    <th class="px-4 py-3 text-right text-gray-600 font-semibold">Haber</th>
+                    <th class="px-4 py-3 text-right text-gray-600 font-semibold">Saldo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Fila de Saldo Inicial -->
+                <tr class="bg-gray-50 font-medium">
+                    <td class="px-4 py-2 text-gray-500" colspan="4">SALDO INICIAL</td>
+                    <td class="px-4 py-2 text-right"></td>
+                    <td class="px-4 py-2 text-right"></td>
+                    <td class="px-4 py-2 text-right font-bold">${{ "%.2f"|format(libro.saldo_inicial) }}</td>
+                </tr>
+
+                {% for mov in movimientos %}
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="px-4 py-3 text-gray-700">{{ mov.fecha.strftime('%d/%m/%Y') }}</td>
+                    <td class="px-4 py-3 text-gray-500 font-mono">{{ mov.numero_asiento }}</td>
+                    <td class="px-4 py-3 text-gray-800">{{ mov.concepto[:50] }}{% if mov.concepto|length > 50 %}...{% endif %}</td>
+                    <td class="px-4 py-3">
+                        {% for cp in mov.contrapartidas %}
+                        <div class="text-xs">
+                            {% if cp.codigo != '-' %}
+                            <a href="/dashboard/reportes/libro-mayor/{{ cp.codigo }}?anio={{ periodo.anio }}&mes={{ periodo.mes }}"
+                               class="text-ecu-blue hover:underline">
+                                <span class="font-mono">{{ cp.codigo }}</span>
+                            </a>
+                            <span class="text-gray-500">{{ cp.nombre[:25] }}{% if cp.nombre|length > 25 %}...{% endif %}</span>
+                            {% else %}
+                            <span class="text-gray-400">{{ cp.nombre }}</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        {% if mov.debe > 0 %}
+                        <span class="text-green-700 font-medium">${{ "%.2f"|format(mov.debe) }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        {% if mov.haber > 0 %}
+                        <span class="text-red-700 font-medium">${{ "%.2f"|format(mov.haber) }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-right font-bold">
+                        {% if mov.saldo >= 0 %}
+                        <span class="text-gray-800">${{ "%.2f"|format(mov.saldo) }}</span>
+                        {% else %}
+                        <span class="text-red-600">-${{ "%.2f"|format(mov.saldo|abs) }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                        No hay movimientos en este periodo
+                    </td>
+                </tr>
+                {% endfor %}
+
+                <!-- Fila de Totales -->
+                <tr class="bg-gray-100 font-bold">
+                    <td class="px-4 py-3" colspan="4">TOTALES</td>
+                    <td class="px-4 py-3 text-right text-green-700">${{ "%.2f"|format(libro.total_debe) }}</td>
+                    <td class="px-4 py-3 text-right text-red-700">${{ "%.2f"|format(libro.total_haber) }}</td>
+                    <td class="px-4 py-3 text-right text-blue-800">${{ "%.2f"|format(libro.saldo_final) }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Leyenda -->
+    <div class="mt-6 p-4 bg-gray-50 rounded-lg text-sm text-gray-600">
+        <h4 class="font-semibold mb-2">Leyenda:</h4>
+        <ul class="list-disc list-inside space-y-1">
+            <li><span class="text-green-700 font-medium">Debe</span>: Aumentos en cuentas de activo/gasto, disminuciones en pasivo/patrimonio/ingreso</li>
+            <li><span class="text-red-700 font-medium">Haber</span>: Aumentos en pasivo/patrimonio/ingreso, disminuciones en activo/gasto</li>
+            <li><span class="text-blue-600 font-medium">Contrapartida</span>: Cuenta(s) del mismo asiento contable (click para ver su libro mayor)</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

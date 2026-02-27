@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECUCONDOR - {% block title %}Dashboard{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'ecu-blue': '#0d3b66',
+                        'ecu-gold': '#ffc233',
+                        'ecu-red': '#d62828',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .card {
+            @apply bg-white rounded-lg shadow-md p-6;
+        }
+
+        .stat-value {
+            @apply text-2xl font-bold text-gray-900;
+        }
+
+        .stat-label {
+            @apply text-sm text-gray-500 uppercase tracking-wide;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+
+<body class="bg-gray-100 min-h-screen flex">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-ecu-blue text-white flex-shrink-0 hidden md:flex flex-col">
+        <div class="p-4 border-b border-blue-800">
+            <a href="/dashboard"
+                class="text-2xl font-bold hover:text-ecu-gold transition block text-center">ECUCONDOR</a>
+            {% if empresa %}
+            <p class="text-xs text-blue-200 text-center mt-1">{{ empresa.razon_social }}</p>
+            <p class="text-xs text-gray-400 text-center">RUC: {{ empresa.ruc }}</p>
+            {% endif %}
+        </div>
+
+        <nav class="flex-1 overflow-y-auto py-4">
+            <ul class="space-y-1">
+                <!-- Dashboard -->
+                <li>
+                    <a href="/dashboard"
+                        class="flex items-center px-4 py-3 hover:bg-blue-800 transition border-l-4 border-transparent hover:border-ecu-gold">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z">
+                            </path>
+                        </svg>
+                        Resumen
+                    </a>
+                </li>
+
+                <!-- Contabilidad -->
+                <li class="px-4 pt-4 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Contabilidad
+                </li>
+                <li>
+                    <a href="/dashboard/reportes/libro-diario"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                            </path>
+                        </svg>
+                        Libro Diario
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/reportes/balance"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                            </path>
+                        </svg>
+                        Balance General
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/reportes/resultados"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                        Estado de Resultados
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/contabilidad/asientos"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                            </path>
+                        </svg>
+                        Asientos Manuales
+                    </a>
+                </li>
+
+                <!-- Ventas -->
+                <li class="px-4 pt-4 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Ventas</li>
+                <li>
+                    <a href="/dashboard/ventas"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                            </path>
+                        </svg>
+                        Facturas Emitidas
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/ventas/clientes"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                            </path>
+                        </svg>
+                        Clientes
+                    </a>
+                </li>
+
+                <!-- Compras -->
+                <li class="px-4 pt-4 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Compras</li>
+                <li>
+                    <a href="/dashboard/compras"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                            </path>
+                        </svg>
+                        Facturas Recibidas
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/compras/proveedores"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                            </path>
+                        </svg>
+                        Proveedores
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/compras/importar"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12">
+                            </path>
+                        </svg>
+                        Importar XML/PDF
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/compras/pendientes"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4">
+                            </path>
+                        </svg>
+                        Revisar Pendientes
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/compras/liquidaciones"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                            </path>
+                        </svg>
+                        Liquidaciones Cripto
+                    </a>
+                </li>
+
+                <!-- Impuestos -->
+                <li class="px-4 pt-4 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Impuestos</li>
+                <li>
+                    <a href="/dashboard/impuestos"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                        Calendario y ATS
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/impuestos/form-104"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                        Form 104 - IVA
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/impuestos/form-103"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z">
+                            </path>
+                        </svg>
+                        Form 103 - Retenciones
+                    </a>
+                </li>
+
+                <!-- Tesoreria -->
+                <li class="px-4 pt-4 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Tesoreria</li>
+                <li>
+                    <a href="/dashboard/tesoreria/cuentas-cobrar"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                            </path>
+                        </svg>
+                        Cuentas por Cobrar
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/tesoreria/cuentas-pagar"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z">
+                            </path>
+                        </svg>
+                        Cuentas por Pagar
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/tesoreria/flujo-caja"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                        Flujo de Caja
+                    </a>
+                </li>
+
+                <!-- Banco -->
+                <li class="px-4 pt-4 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Banco</li>
+                <li>
+                    <a href="/dashboard/banco/transacciones"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z">
+                            </path>
+                        </svg>
+                        Transacciones
+                    </a>
+                </li>
+
+                <!-- Economía -->
+                <li class="px-4 pt-4 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Economía</li>
+                <li>
+                    <a href="#" class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                        Ratios Financieros
+                    </a>
+                </li>
+
+                <!-- Asesor Fiscal -->
+                <li class="px-4 pt-4 pb-2 text-xs font-semibold text-ecu-gold uppercase tracking-wider">Asesor Fiscal
+                </li>
+                <li>
+                    <a href="/dashboard/asesor/optimizacion"
+                        class="flex items-center px-4 py-2 hover:bg-blue-800 transition text-sm">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        Optimización
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="p-4 border-t border-blue-800 text-xs text-center text-gray-400">
+            &copy; {{ anio_actual if anio_actual else 2025 }} ECUCONDOR
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <div class="flex-1 flex flex-col min-h-screen">
+        <header class="bg-white shadow md:hidden">
+            <div class="px-4 py-3 flex justify-between items-center">
+                <span class="font-bold text-ecu-blue">ECUCONDOR</span>
+                <button class="text-gray-600 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto p-6">
+            {% if periodo %}
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">{% block header_title %}Dashboard{% endblock %}</h2>
+                <span class="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
+                    {{ periodo.mes_nombre }} {{ periodo.anio }}
+                </span>
+            </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+
+</html>

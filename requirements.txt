@@ -1,0 +1,53 @@
+# =====================================================
+# ECUCONDOR - Dependencias Python
+# Sistema de Contabilidad Automatizada para SAS Ecuador
+# =====================================================
+
+# ===== FRAMEWORK WEB =====
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# ===== BASE DE DATOS =====
+supabase>=2.3.0
+asyncpg>=0.29.0
+
+# ===== SRI - FACTURACIÓN ELECTRÓNICA =====
+# XML y procesamiento
+lxml>=5.1.0
+
+# Firma digital XAdES-BES
+signxml>=3.2.0
+cryptography>=42.0.0
+
+# Cliente SOAP para Web Services SRI
+zeep>=4.2.1
+requests>=2.31.0
+
+# Generación PDF (RIDE)
+weasyprint>=60.0
+jinja2>=3.1.0
+
+# ===== PROCESAMIENTO DE DATOS =====
+pandas>=2.2.0
+openpyxl>=3.1.0
+
+# ===== VALIDACIÓN =====
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+email-validator>=2.1.0
+
+# ===== UTILIDADES =====
+python-dotenv>=1.0.0
+tenacity>=8.2.0
+httpx>=0.26.0
+structlog>=24.1.0
+python-dateutil>=2.8.0
+
+# ===== DESARROLLO Y TESTING =====
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+
+# ===== SEGURIDAD =====
+python-jose[cryptography]>=3.3.0

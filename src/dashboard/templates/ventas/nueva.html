@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva Factura{% endblock %}
+{% block header_title %}Nueva Factura{% endblock %}
+
+{% block head %}
+<style>
+    .item-row {
+        transition: all 0.2s;
+    }
+    .item-row:hover {
+        background-color: #f9fafb;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <form id="form-factura" class="space-y-6">
+        <!-- Datos del Cliente -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Datos del Cliente</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo Identificacion *</label>
+                    <select name="cliente_tipo_id" id="cliente_tipo_id" required class="w-full border rounded px-3 py-2">
+                        <option value="04">RUC</option>
+                        <option value="05">Cedula</option>
+                        <option value="06">Pasaporte</option>
+                        <option value="07">Consumidor Final</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Identificacion *</label>
+                    <div class="flex space-x-2">
+                        <input type="text" name="cliente_identificacion" id="cliente_identificacion" required
+                               class="flex-1 border rounded px-3 py-2" placeholder="1790016919001"
+                               onchange="buscarCliente()">
+                        <button type="button" onclick="buscarCliente()"
+                                class="bg-gray-200 px-3 py-2 rounded hover:bg-gray-300" title="Buscar cliente">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <p id="cliente-status" class="text-xs mt-1 hidden"></p>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Razon Social *</label>
+                    <input type="text" name="cliente_razon_social" id="cliente_razon_social" required
+                           class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" name="cliente_email" id="cliente_email"
+                           class="w-full border rounded px-3 py-2" placeholder="cliente@ejemplo.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Direccion</label>
+                    <input type="text" name="cliente_direccion" id="cliente_direccion"
+                           class="w-full border rounded px-3 py-2">
+                </div>
+            </div>
+        </div>
+
+        <!-- Items de la Factura -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Detalle de Items</h3>
+                <button type="button" onclick="agregarItem()"
+                        class="bg-ecu-blue text-white px-3 py-1 rounded text-sm hover:bg-blue-700 flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Agregar Item
+                </button>
+            </div>
+
+            <table class="min-w-full" id="tabla-items">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase w-24">Codigo</th>
+                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripcion</th>
+                        <th class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase w-20">Cant.</th>
+                        <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase w-24">P. Unit.</th>
+                        <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase w-20">Desc.</th>
+                        <th class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase w-16">IVA</th>
+                        <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase w-24">Subtotal</th>
+                        <th class="px-2 py-2 w-10"></th>
+                    </tr>
+                </thead>
+                <tbody id="items-body" class="divide-y divide-gray-200">
+                    <!-- Items dinamicos -->
+                </tbody>
+            </table>
+
+            <div class="mt-4 text-right">
+                <button type="button" onclick="agregarItem()"
+                        class="text-ecu-blue hover:underline text-sm">+ Agregar otro item</button>
+            </div>
+        </div>
+
+        <!-- Totales y Forma de Pago -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Forma de Pago -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Forma de Pago</h3>
+                <select name="forma_pago" id="forma_pago" required class="w-full border rounded px-3 py-2">
+                    <option value="01">SIN UTILIZACION DEL SISTEMA FINANCIERO</option>
+                    <option value="15">COMPENSACION DE DEUDAS</option>
+                    <option value="16">TARJETA DE DEBITO</option>
+                    <option value="17">DINERO ELECTRONICO</option>
+                    <option value="18">TARJETA PREPAGO</option>
+                    <option value="19">TARJETA DE CREDITO</option>
+                    <option value="20">OTROS CON UTILIZACION DEL SISTEMA FINANCIERO</option>
+                    <option value="21">ENDOSO DE TITULOS</option>
+                </select>
+
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Informacion Adicional (opcional)</label>
+                    <textarea name="info_adicional" id="info_adicional" rows="2"
+                              class="w-full border rounded px-3 py-2 text-sm"
+                              placeholder="Observaciones, numero de orden, etc."></textarea>
+                </div>
+            </div>
+
+            <!-- Totales -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Totales</h3>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Subtotal 15%:</span>
+                        <span id="subtotal-15" class="font-medium">$0.00</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Subtotal 0%:</span>
+                        <span id="subtotal-0" class="font-medium">$0.00</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Subtotal sin impuestos:</span>
+                        <span id="subtotal" class="font-medium">$0.00</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Descuento:</span>
+                        <span id="total-descuento" class="font-medium text-red-600">-$0.00</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">IVA 15%:</span>
+                        <span id="total-iva" class="font-medium">$0.00</span>
+                    </div>
+                    <hr class="my-2">
+                    <div class="flex justify-between text-lg font-bold">
+                        <span>TOTAL:</span>
+                        <span id="total" class="text-ecu-blue">$0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Acciones -->
+        <div class="flex justify-between items-center">
+            <a href="/dashboard/ventas" class="text-gray-600 hover:text-gray-800">
+                <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Volver al listado
+            </a>
+            <div class="flex space-x-3">
+                <button type="button" onclick="guardarBorrador()"
+                        class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 transition">
+                    Guardar como Borrador
+                </button>
+                <button type="submit"
+                        class="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Firmar y Enviar al SRI
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+let itemCount = 0;
+
+function agregarItem(data = {}) {
+    itemCount++;
+    const tbody = document.getElementById('items-body');
+    const tr = document.createElement('tr');
+    tr.className = 'item-row';
+    tr.id = `item-${itemCount}`;
+    tr.innerHTML = `
+        <td class="px-2 py-2">
+            <input type="text" name="items[${itemCount}][codigo]" value="${data.codigo || ''}"
+                   class="w-full border rounded px-2 py-1 text-sm" placeholder="001">
+        </td>
+        <td class="px-2 py-2">
+            <input type="text" name="items[${itemCount}][descripcion]" value="${data.descripcion || ''}" required
+                   class="w-full border rounded px-2 py-1 text-sm" placeholder="Descripcion del producto o servicio">
+        </td>
+        <td class="px-2 py-2">
+            <input type="number" name="items[${itemCount}][cantidad]" value="${data.cantidad || 1}" min="0.01" step="0.01" required
+                   class="w-full border rounded px-2 py-1 text-sm text-center" onchange="calcularTotales()">
+        </td>
+        <td class="px-2 py-2">
+            <input type="number" name="items[${itemCount}][precio_unitario]" value="${data.precio_unitario || ''}" min="0" step="0.01" required
+                   class="w-full border rounded px-2 py-1 text-sm text-right" placeholder="0.00" onchange="calcularTotales()">
+        </td>
+        <td class="px-2 py-2">
+            <input type="number" name="items[${itemCount}][descuento]" value="${data.descuento || 0}" min="0" step="0.01"
+                   class="w-full border rounded px-2 py-1 text-sm text-right" placeholder="0.00" onchange="calcularTotales()">
+        </td>
+        <td class="px-2 py-2 text-center">
+            <input type="checkbox" name="items[${itemCount}][aplica_iva]" ${data.aplica_iva !== false ? 'checked' : ''}
+                   class="w-4 h-4" onchange="calcularTotales()">
+        </td>
+        <td class="px-2 py-2 text-right">
+            <span class="item-subtotal text-sm font-medium">$0.00</span>
+        </td>
+        <td class="px-2 py-2">
+            <button type="button" onclick="eliminarItem(${itemCount})" class="text-red-500 hover:text-red-700">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+            </button>
+        </td>
+    `;
+    tbody.appendChild(tr);
+    calcularTotales();
+}
+
+function eliminarItem(id) {
+    const row = document.getElementById(`item-${id}`);
+    if (row) {
+        row.remove();
+        calcularTotales();
+    }
+}
+
+function calcularTotales() {
+    const rows = document.querySelectorAll('.item-row');
+    let subtotal15 = 0;
+    let subtotal0 = 0;
+    let totalDescuento = 0;
+
+    rows.forEach(row => {
+        const cantidad = parseFloat(row.querySelector('input[name*="cantidad"]').value) || 0;
+        const precio = parseFloat(row.querySelector('input[name*="precio_unitario"]').value) || 0;
+        const descuento = parseFloat(row.querySelector('input[name*="descuento"]').value) || 0;
+        const aplicaIva = row.querySelector('input[name*="aplica_iva"]').checked;
+
+        const subtotalItem = (cantidad * precio) - descuento;
+        row.querySelector('.item-subtotal').textContent = `$${subtotalItem.toFixed(2)}`;
+
+        totalDescuento += descuento;
+
+        if (aplicaIva) {
+            subtotal15 += subtotalItem;
+        } else {
+            subtotal0 += subtotalItem;
+        }
+    });
+
+    const subtotal = subtotal15 + subtotal0;
+    const iva = subtotal15 * 0.15;
+    const total = subtotal + iva;
+
+    document.getElementById('subtotal-15').textContent = `$${subtotal15.toFixed(2)}`;
+    document.getElementById('subtotal-0').textContent = `$${subtotal0.toFixed(2)}`;
+    document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
+    document.getElementById('total-descuento').textContent = `-$${totalDescuento.toFixed(2)}`;
+    document.getElementById('total-iva').textContent = `$${iva.toFixed(2)}`;
+    document.getElementById('total').textContent = `$${total.toFixed(2)}`;
+}
+
+async function buscarCliente() {
+    const identificacion = document.getElementById('cliente_identificacion').value;
+    const statusEl = document.getElementById('cliente-status');
+
+    if (!identificacion || identificacion.length < 3) return;
+
+    statusEl.textContent = 'Buscando...';
+    statusEl.className = 'text-xs mt-1 text-blue-600';
+    statusEl.classList.remove('hidden');
+
+    try {
+        const resp = await fetch(`/api/v1/clientes/por-identificacion/${identificacion}`);
+        if (resp.ok) {
+            const cliente = await resp.json();
+            document.getElementById('cliente_razon_social').value = cliente.razon_social || '';
+            document.getElementById('cliente_email').value = cliente.email || '';
+            document.getElementById('cliente_direccion').value = cliente.direccion || '';
+            document.getElementById('cliente_tipo_id').value = cliente.tipo_identificacion || '04';
+
+            statusEl.textContent = 'Cliente encontrado';
+            statusEl.className = 'text-xs mt-1 text-green-600';
+        } else {
+            statusEl.textContent = 'Cliente no registrado (se creara automaticamente)';
+            statusEl.className = 'text-xs mt-1 text-yellow-600';
+        }
+    } catch (err) {
+        statusEl.textContent = 'Error buscando cliente';
+        statusEl.className = 'text-xs mt-1 text-red-600';
+    }
+}
+
+function obtenerDatosFormulario(enviarSRI = true) {
+    const form = document.getElementById('form-factura');
+
+    const items = [];
+    document.querySelectorAll('.item-row').forEach(row => {
+        items.push({
+            codigo: row.querySelector('input[name*="codigo"]').value || '001',
+            descripcion: row.querySelector('input[name*="descripcion"]').value,
+            cantidad: parseFloat(row.querySelector('input[name*="cantidad"]').value) || 1,
+            precio_unitario: parseFloat(row.querySelector('input[name*="precio_unitario"]').value) || 0,
+            descuento: parseFloat(row.querySelector('input[name*="descuento"]').value) || 0,
+            aplica_iva: row.querySelector('input[name*="aplica_iva"]').checked,
+            porcentaje_iva: 15.00,
+        });
+    });
+
+    return {
+        cliente: {
+            tipo_identificacion: document.getElementById('cliente_tipo_id').value,
+            identificacion: document.getElementById('cliente_identificacion').value,
+            razon_social: document.getElementById('cliente_razon_social').value,
+            email: document.getElementById('cliente_email').value || null,
+            direccion: document.getElementById('cliente_direccion').value || null,
+        },
+        items: items,
+        forma_pago: document.getElementById('forma_pago').value,
+        info_adicional: document.getElementById('info_adicional').value ?
+            { observaciones: document.getElementById('info_adicional').value } : null,
+        enviar_sri: enviarSRI,
+    };
+}
+
+async function guardarBorrador() {
+    const data = obtenerDatosFormulario(false);
+
+    if (data.items.length === 0) {
+        alert('Agregue al menos un item');
+        return;
+    }
+
+    try {
+        const resp = await fetch('/api/v1/invoices/facturas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (resp.ok) {
+            const result = await resp.json();
+            alert('Factura guardada como borrador');
+            window.location.href = `/dashboard/ventas/${result.id}`;
+        } else {
+            const err = await resp.json();
+            alert('Error: ' + (err.detail || 'No se pudo guardar'));
+        }
+    } catch (err) {
+        alert('Error de conexion: ' + err.message);
+    }
+}
+
+document.getElementById('form-factura').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const data = obtenerDatosFormulario(true);
+
+    if (data.items.length === 0) {
+        alert('Agregue al menos un item');
+        return;
+    }
+
+    if (!confirm('Firmar y enviar factura al SRI?')) return;
+
+    try {
+        const resp = await fetch('/api/v1/invoices/facturas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (resp.ok) {
+            const result = await resp.json();
+            alert(result.mensaje);
+            window.location.href = `/dashboard/ventas/${result.id}`;
+        } else {
+            const err = await resp.json();
+            alert('Error: ' + (err.detail || 'No se pudo crear la factura'));
+        }
+    } catch (err) {
+        alert('Error de conexion: ' + err.message);
+    }
+});
+
+// Agregar primer item al cargar
+agregarItem();
+</script>
+{% endblock %}

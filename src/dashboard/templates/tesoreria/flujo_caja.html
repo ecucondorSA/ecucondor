@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}Flujo de Caja{% endblock %}
+{% block header_title %}Flujo de Caja{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <!-- Header con filtros -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h2 class="text-xl font-semibold text-gray-800">Flujo de Caja Proyectado</h2>
+            <p class="text-sm text-gray-500">Proyeccion de entradas y salidas de efectivo</p>
+        </div>
+        <form method="GET" class="flex items-center space-x-2 bg-white p-2 rounded-lg shadow-sm">
+            <select name="anio" class="border-gray-300 rounded text-sm">
+                {% for a in range(2024, 2027) %}
+                <option value="{{ a }}" {% if a == anio %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+            <select name="mes" class="border-gray-300 rounded text-sm">
+                {% set meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+                'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] %}
+                {% for m in range(1, 13) %}
+                <option value="{{ m }}" {% if m == mes %}selected{% endif %}>{{ meses[m-1] }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="bg-ecu-blue text-white px-4 py-2 rounded hover:bg-blue-800">
+                Consultar
+            </button>
+        </form>
+    </div>
+
+    <!-- Tarjetas de resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-sm text-gray-500">Saldo Inicial</p>
+            <p class="text-2xl font-bold text-gray-800">${{ '{:,.2f}'.format(resumen.saldo_inicial) }}</p>
+        </div>
+        <div class="bg-green-50 rounded-lg shadow-sm p-4 border border-green-200">
+            <p class="text-sm text-green-600">Ingresos Proyectados</p>
+            <p class="text-2xl font-bold text-green-700">${{ '{:,.2f}'.format(resumen.ingresos_proyectados) }}</p>
+        </div>
+        <div class="bg-red-50 rounded-lg shadow-sm p-4 border border-red-200">
+            <p class="text-sm text-red-600">Egresos Proyectados</p>
+            <p class="text-2xl font-bold text-red-700">${{ '{:,.2f}'.format(resumen.egresos_proyectados) }}</p>
+        </div>
+        <div class="{% if resumen.flujo_neto >= 0 %}bg-blue-50 border-blue-200{% else %}bg-orange-50 border-orange-200{% endif %} rounded-lg shadow-sm p-4 border">
+            <p class="text-sm {% if resumen.flujo_neto >= 0 %}text-blue-600{% else %}text-orange-600{% endif %}">Flujo Neto</p>
+            <p class="text-2xl font-bold {% if resumen.flujo_neto >= 0 %}text-blue-700{% else %}text-orange-700{% endif %}">
+                {% if resumen.flujo_neto >= 0 %}{% else %}-{% endif %}${{ '{:,.2f}'.format(resumen.flujo_neto|abs) }}
+            </p>
+        </div>
+        <div class="{% if resumen.saldo_final >= 0 %}bg-ecu-blue{% else %}bg-red-600{% endif %} rounded-lg shadow-sm p-4 text-white">
+            <p class="text-sm opacity-80">Saldo Final</p>
+            <p class="text-2xl font-bold">${{ '{:,.2f}'.format(resumen.saldo_final) }}</p>
+        </div>
+    </div>
+
+    <!-- Alerta de flujo negativo -->
+    {% if resumen.flujo_neto < 0 %}
+    <div class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-lg">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-orange-800">Flujo de Caja Negativo</h3>
+                <p class="mt-1 text-sm text-orange-700">
+                    Los egresos superan a los ingresos proyectados en ${{ '{:,.2f}'.format(resumen.flujo_neto|abs) }}.
+                    Considere acelerar cobros o diferir pagos.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Detalle de Flujo -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Ingresos -->
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="bg-green-600 text-white px-4 py-3 font-semibold flex justify-between items-center">
+                <span>ENTRADAS DE EFECTIVO</span>
+                <span class="text-sm">${{ '{:,.2f}'.format(resumen.ingresos_proyectados) }}</span>
+            </div>
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <tr class="bg-white">
+                        <td class="px-4 py-3 text-sm">
+                            <div class="font-medium text-gray-900">Cobranzas Proyectadas</div>
+                            <div class="text-xs text-gray-500">Cuentas por cobrar vigentes</div>
+                        </td>
+                        <td class="px-4 py-3 text-right font-mono text-green-700">${{ '{:,.2f}'.format(ingresos.cobranzas_vigentes) }}</td>
+                    </tr>
+                    <tr class="bg-gray-50">
+                        <td class="px-4 py-3 text-sm">
+                            <div class="font-medium text-gray-900">Ventas Contado Estimadas</div>
+                            <div class="text-xs text-gray-500">Promedio mensual</div>
+                        </td>
+                        <td class="px-4 py-3 text-right font-mono text-green-700">${{ '{:,.2f}'.format(ingresos.ventas_contado) }}</td>
+                    </tr>
+                    <tr class="bg-white">
+                        <td class="px-4 py-3 text-sm">
+                            <div class="font-medium text-gray-900">Otros Ingresos</div>
+                            <div class="text-xs text-gray-500">Intereses, comisiones, etc.</div>
+                        </td>
+                        <td class="px-4 py-3 text-right font-mono text-green-700">${{ '{:,.2f}'.format(ingresos.otros) }}</td>
+                    </tr>
+                </tbody>
+                <tfoot class="bg-green-50">
+                    <tr>
+                        <td class="px-4 py-3 text-sm font-bold">TOTAL ENTRADAS</td>
+                        <td class="px-4 py-3 text-right font-mono font-bold text-green-700">${{ '{:,.2f}'.format(resumen.ingresos_proyectados) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Egresos -->
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="bg-red-600 text-white px-4 py-3 font-semibold flex justify-between items-center">
+                <span>SALIDAS DE EFECTIVO</span>
+                <span class="text-sm">${{ '{:,.2f}'.format(resumen.egresos_proyectados) }}</span>
+            </div>
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <tr class="bg-white">
+                        <td class="px-4 py-3 text-sm">
+                            <div class="font-medium text-gray-900">Pagos a Proveedores</div>
+                            <div class="text-xs text-gray-500">Cuentas por pagar del mes</div>
+                        </td>
+                        <td class="px-4 py-3 text-right font-mono text-red-700">${{ '{:,.2f}'.format(egresos.pagos_proveedores) }}</td>
+                    </tr>
+                    <tr class="bg-gray-50">
+                        <td class="px-4 py-3 text-sm">
+                            <div class="font-medium text-gray-900">Nomina</div>
+                            <div class="text-xs text-gray-500">Sueldos y beneficios</div>
+                        </td>
+                        <td class="px-4 py-3 text-right font-mono text-red-700">${{ '{:,.2f}'.format(egresos.nomina) }}</td>
+                    </tr>
+                    <tr class="bg-white">
+                        <td class="px-4 py-3 text-sm">
+                            <div class="font-medium text-gray-900">Impuestos</div>
+                            <div class="text-xs text-gray-500">IVA, IR, Retenciones</div>
+                        </td>
+                        <td class="px-4 py-3 text-right font-mono text-red-700">${{ '{:,.2f}'.format(egresos.impuestos) }}</td>
+                    </tr>
+                    <tr class="bg-gray-50">
+                        <td class="px-4 py-3 text-sm">
+                            <div class="font-medium text-gray-900">Servicios y Alquiler</div>
+                            <div class="text-xs text-gray-500">Luz, agua, telefono, local</div>
+                        </td>
+                        <td class="px-4 py-3 text-right font-mono text-red-700">${{ '{:,.2f}'.format(egresos.servicios) }}</td>
+                    </tr>
+                    <tr class="bg-white">
+                        <td class="px-4 py-3 text-sm">
+                            <div class="font-medium text-gray-900">Otros Gastos</div>
+                            <div class="text-xs text-gray-500">Gastos operativos varios</div>
+                        </td>
+                        <td class="px-4 py-3 text-right font-mono text-red-700">${{ '{:,.2f}'.format(egresos.otros) }}</td>
+                    </tr>
+                </tbody>
+                <tfoot class="bg-red-50">
+                    <tr>
+                        <td class="px-4 py-3 text-sm font-bold">TOTAL SALIDAS</td>
+                        <td class="px-4 py-3 text-right font-mono font-bold text-red-700">${{ '{:,.2f}'.format(resumen.egresos_proyectados) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <!-- Proyeccion Semanal -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="bg-gray-600 text-white px-4 py-3 font-semibold flex justify-between items-center">
+            <span>PROYECCION SEMANAL</span>
+            <a href="/dashboard/tesoreria/flujo-caja/excel?anio={{ anio }}&mes={{ mes }}"
+               class="text-sm bg-green-600 hover:bg-green-700 px-3 py-1 rounded">
+                Exportar Excel
+            </a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Semana</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo Inicial</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase text-green-600">Ingresos</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase text-red-600">Egresos</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Flujo</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo Final</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for semana in proyeccion_semanal %}
+                    <tr class="{% if semana.saldo_final < 0 %}bg-red-50{% else %}bg-white{% endif %}">
+                        <td class="px-4 py-3 text-sm font-medium">{{ semana.nombre }}</td>
+                        <td class="px-4 py-3 text-right font-mono">${{ '{:,.2f}'.format(semana.saldo_inicial) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-green-700">${{ '{:,.2f}'.format(semana.ingresos) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-red-700">${{ '{:,.2f}'.format(semana.egresos) }}</td>
+                        <td class="px-4 py-3 text-right font-mono {% if semana.flujo >= 0 %}text-blue-700{% else %}text-orange-700{% endif %}">
+                            {% if semana.flujo >= 0 %}{% else %}-{% endif %}${{ '{:,.2f}'.format(semana.flujo|abs) }}
+                        </td>
+                        <td class="px-4 py-3 text-right font-mono font-bold {% if semana.saldo_final >= 0 %}text-gray-900{% else %}text-red-700{% endif %}">
+                            ${{ '{:,.2f}'.format(semana.saldo_final) }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Indicadores de Liquidez -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="text-sm font-medium text-gray-500 mb-2">Dias de Caja</h3>
+            <p class="text-3xl font-bold text-ecu-blue">{{ indicadores.dias_caja }}</p>
+            <p class="text-xs text-gray-500 mt-1">Dias que cubren gastos operativos</p>
+            {% if indicadores.dias_caja < 15 %}
+            <div class="mt-2 text-xs text-red-600">Nivel critico. Minimo recomendado: 15 dias</div>
+            {% elif indicadores.dias_caja < 30 %}
+            <div class="mt-2 text-xs text-yellow-600">Nivel bajo. Recomendado: 30+ dias</div>
+            {% else %}
+            <div class="mt-2 text-xs text-green-600">Nivel saludable</div>
+            {% endif %}
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="text-sm font-medium text-gray-500 mb-2">Ratio Ingresos/Egresos</h3>
+            <p class="text-3xl font-bold {% if indicadores.ratio_ie >= 1 %}text-green-600{% else %}text-red-600{% endif %}">
+                {{ '{:.2f}'.format(indicadores.ratio_ie) }}
+            </p>
+            <p class="text-xs text-gray-500 mt-1">{% if indicadores.ratio_ie >= 1 %}Superavit{% else %}Deficit{% endif %} de caja</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="text-sm font-medium text-gray-500 mb-2">Cobranza Efectiva</h3>
+            <p class="text-3xl font-bold text-ecu-blue">{{ '{:.1f}'.format(indicadores.cobranza_efectiva) }}%</p>
+            <p class="text-xs text-gray-500 mt-1">% de cuentas por cobrar recuperadas</p>
+        </div>
+    </div>
+
+    <!-- Grafico de Flujo -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="font-semibold text-gray-700 mb-4">Evolucion del Saldo</h3>
+        <div class="h-64 flex items-end space-x-4 px-4">
+            {% for semana in proyeccion_semanal %}
+            <div class="flex-1 flex flex-col items-center">
+                {% set max_val = resumen.saldo_inicial if resumen.saldo_inicial > resumen.saldo_final else resumen.saldo_final %}
+                {% set height = ((semana.saldo_final|abs) / (max_val|abs + 1) * 100)|round %}
+                <div class="w-full {% if semana.saldo_final >= 0 %}bg-blue-500{% else %}bg-red-500{% endif %} rounded-t"
+                     style="height: {{ height }}%"></div>
+                <span class="text-xs text-gray-500 mt-2">S{{ loop.index }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

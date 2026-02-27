@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}Cuentas por Cobrar{% endblock %}
+{% block header_title %}Cuentas por Cobrar{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <!-- Header con filtros -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h2 class="text-xl font-semibold text-gray-800">Cartera de Clientes</h2>
+            <p class="text-sm text-gray-500">Saldos pendientes de cobro por cliente</p>
+        </div>
+        <form method="GET" class="flex items-center space-x-2 bg-white p-2 rounded-lg shadow-sm">
+            <select name="anio" class="border-gray-300 rounded text-sm">
+                {% for a in range(2024, 2027) %}
+                <option value="{{ a }}" {% if a == anio %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+            <select name="mes" class="border-gray-300 rounded text-sm">
+                {% set meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+                'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] %}
+                {% for m in range(1, 13) %}
+                <option value="{{ m }}" {% if m == mes %}selected{% endif %}>{{ meses[m-1] }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="bg-ecu-blue text-white px-4 py-2 rounded hover:bg-blue-800">
+                Consultar
+            </button>
+        </form>
+    </div>
+
+    <!-- Tarjetas de resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <p class="text-sm text-gray-500">Total por Cobrar</p>
+            <p class="text-2xl font-bold text-gray-800">${{ '{:,.2f}'.format(resumen.total_cobrar) }}</p>
+        </div>
+        <div class="bg-green-50 rounded-lg shadow-sm p-4 border border-green-200">
+            <p class="text-sm text-green-600">Vigente</p>
+            <p class="text-2xl font-bold text-green-700">${{ '{:,.2f}'.format(resumen.vigente) }}</p>
+            <p class="text-xs text-gray-500">0-30 dias</p>
+        </div>
+        <div class="bg-yellow-50 rounded-lg shadow-sm p-4 border border-yellow-200">
+            <p class="text-sm text-yellow-600">Por Vencer</p>
+            <p class="text-2xl font-bold text-yellow-700">${{ '{:,.2f}'.format(resumen.por_vencer) }}</p>
+            <p class="text-xs text-gray-500">31-60 dias</p>
+        </div>
+        <div class="bg-red-50 rounded-lg shadow-sm p-4 border border-red-300">
+            <p class="text-sm text-red-600">Vencido</p>
+            <p class="text-2xl font-bold text-red-700">${{ '{:,.2f}'.format(resumen.vencido) }}</p>
+            <p class="text-xs text-gray-500">> 60 dias</p>
+        </div>
+    </div>
+
+    <!-- Tabla de Antiguedad -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="bg-ecu-blue text-white px-4 py-3 font-semibold flex justify-between items-center">
+            <span>ANTIGUEDAD DE CARTERA</span>
+            <a href="/dashboard/tesoreria/cuentas-cobrar/excel?anio={{ anio }}&mes={{ mes }}"
+               class="text-sm bg-green-600 hover:bg-green-700 px-3 py-1 rounded">
+                Exportar Excel
+            </a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Identificacion</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase text-green-600">Vigente</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase text-yellow-600">31-60</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase text-orange-600">61-90</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase text-red-600">> 90</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for cliente in clientes %}
+                    <tr class="{% if loop.index is odd %}bg-white{% else %}bg-gray-50{% endif %} hover:bg-blue-50">
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ cliente.razon_social }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600 font-mono">{{ cliente.identificacion }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-bold">${{ '{:,.2f}'.format(cliente.total) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-green-700">${{ '{:,.2f}'.format(cliente.vigente) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-yellow-700">${{ '{:,.2f}'.format(cliente.dias_31_60) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-orange-700">${{ '{:,.2f}'.format(cliente.dias_61_90) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-red-700">${{ '{:,.2f}'.format(cliente.dias_90_mas) }}</td>
+                        <td class="px-4 py-3 text-center">
+                            <a href="/dashboard/tesoreria/cliente/{{ cliente.id }}/movimientos"
+                               class="text-ecu-blue hover:underline text-sm">Ver detalle</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                            No hay saldos pendientes de cobro
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if clientes %}
+                <tfoot class="bg-gray-100 font-bold">
+                    <tr>
+                        <td colspan="2" class="px-4 py-3 text-right">TOTALES:</td>
+                        <td class="px-4 py-3 text-right font-mono">${{ '{:,.2f}'.format(resumen.total_cobrar) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-green-700">${{ '{:,.2f}'.format(resumen.vigente) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-yellow-700">${{ '{:,.2f}'.format(resumen.dias_31_60) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-orange-700">${{ '{:,.2f}'.format(resumen.dias_61_90) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-red-700">${{ '{:,.2f}'.format(resumen.dias_90_mas) }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+
+    <!-- Detalle de Facturas Pendientes -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="bg-gray-600 text-white px-4 py-3 font-semibold">
+            FACTURAS PENDIENTES DE COBRO
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Factura</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vencimiento</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Pagado</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Dias</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for factura in facturas %}
+                    <tr class="{% if factura.dias_vencida > 60 %}bg-red-50{% elif factura.dias_vencida > 30 %}bg-yellow-50{% else %}bg-white{% endif %} hover:bg-blue-50">
+                        <td class="px-4 py-3 text-sm font-mono">
+                            <a href="/dashboard/ventas/{{ factura.id }}" class="text-ecu-blue hover:underline">
+                                {{ factura.numero }}
+                            </a>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ factura.fecha_emision }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ factura.fecha_vencimiento }}</td>
+                        <td class="px-4 py-3 text-sm">{{ factura.cliente_razon_social[:30] }}{% if factura.cliente_razon_social|length > 30 %}...{% endif %}</td>
+                        <td class="px-4 py-3 text-right font-mono">${{ '{:,.2f}'.format(factura.importe_total) }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-green-600">${{ '{:,.2f}'.format(factura.pagado) }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-bold">${{ '{:,.2f}'.format(factura.saldo) }}</td>
+                        <td class="px-4 py-3 text-center">
+                            {% if factura.dias_vencida > 0 %}
+                            <span class="text-red-600 font-bold">{{ factura.dias_vencida }}</span>
+                            {% else %}
+                            <span class="text-gray-500">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            {% if factura.dias_vencida > 60 %}
+                            <span class="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 rounded-full">Vencida</span>
+                            {% elif factura.dias_vencida > 0 %}
+                            <span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 rounded-full">Por vencer</span>
+                            {% else %}
+                            <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">Vigente</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="px-4 py-8 text-center text-gray-500">
+                            No hay facturas pendientes de cobro
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Grafico de Composicion -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="font-semibold text-gray-700 mb-4">Composicion de Cartera</h3>
+        <div class="flex items-center space-x-8">
+            <div class="flex-1">
+                <div class="h-4 bg-gray-200 rounded-full overflow-hidden flex">
+                    {% if resumen.total_cobrar > 0 %}
+                    <div class="bg-green-500 h-full" style="width: {{ (resumen.vigente / resumen.total_cobrar * 100)|round(1) }}%"></div>
+                    <div class="bg-yellow-500 h-full" style="width: {{ (resumen.por_vencer / resumen.total_cobrar * 100)|round(1) }}%"></div>
+                    <div class="bg-red-500 h-full" style="width: {{ (resumen.vencido / resumen.total_cobrar * 100)|round(1) }}%"></div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="flex space-x-4 text-sm">
+                <div class="flex items-center">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                    <span>Vigente</span>
+                </div>
+                <div class="flex items-center">
+                    <span class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
+                    <span>Por Vencer</span>
+                </div>
+                <div class="flex items-center">
+                    <span class="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+                    <span>Vencido</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

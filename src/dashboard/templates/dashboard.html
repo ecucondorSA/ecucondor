@@ -1,0 +1,484 @@
+{% extends "base.html" %}
+
+{% block header_title %}Resumen Financiero{% endblock %}
+
+{% block content %}
+<!-- Period Selector -->
+<div class="bg-white rounded-lg shadow-sm p-4 mb-6 flex justify-between items-center">
+    <h2 class="text-lg font-semibold text-gray-700">Periodo: {{ periodo.mes_nombre }} {{ periodo.anio }}</h2>
+    <form method="GET" class="flex items-center space-x-2">
+        <select name="anio" class="border-gray-300 rounded-md text-sm focus:ring-ecu-blue focus:border-ecu-blue">
+            {% for a in range(2024, 2027) %}
+            <option value="{{ a }}" {% if a==periodo.anio %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+        </select>
+        <select name="mes" class="border-gray-300 rounded-md text-sm focus:ring-ecu-blue focus:border-ecu-blue">
+            {% set meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+            'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] %}
+            {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if m==periodo.mes %}selected{% endif %}>{{ meses[m-1] }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="bg-ecu-blue text-white px-4 py-2 rounded-md text-sm hover:bg-blue-800 transition">
+            Actualizar
+        </button>
+    </form>
+</div>
+
+<!-- Widget Calendario Tributario -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- Alertas de Obligaciones Urgentes -->
+    <div class="lg:col-span-2">
+        {% set alertas = obligaciones|selectattr('alerta')|list %}
+        {% set vencidas = obligaciones|selectattr('vencida')|list %}
+        {% if vencidas or alertas %}
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                Obligaciones Urgentes
+                {% if calendario.alertas %}
+                <span class="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">{{ calendario.alertas }}</span>
+                {% endif %}
+            </h3>
+            <div class="space-y-2">
+                {% for ob in vencidas %}
+                <div class="bg-red-50 border-l-4 border-red-500 p-3 rounded-r">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="font-bold text-red-700">VENCIDA</span>
+                            <span class="text-gray-800 ml-2">{{ ob.nombre }}</span>
+                            <span class="text-xs text-gray-500 ml-2">(Form {{ ob.formulario }})</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm text-red-600">{{ ob.fecha_limite }}</span>
+                            {% if ob.monto > 0 %}
+                            <span class="block font-bold text-red-700">${{ "%.2f"|format(ob.monto) }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% for ob in alertas if not ob.vencida %}
+                <div class="bg-yellow-50 border-l-4 border-yellow-500 p-3 rounded-r">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="font-bold text-yellow-700">{{ ob.dias_restantes }} días</span>
+                            <span class="text-gray-800 ml-2">{{ ob.nombre }}</span>
+                            <span class="text-xs text-gray-500 ml-2">(Form {{ ob.formulario }})</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm text-yellow-600">{{ ob.fecha_limite }}</span>
+                            {% if ob.monto > 0 %}
+                            <span class="block font-bold">${{ "%.2f"|format(ob.monto) }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center">
+            <svg class="w-6 h-6 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span class="text-green-700">No hay obligaciones urgentes. Todas las declaraciones están al día.</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Próximos Vencimientos -->
+    <div class="bg-white rounded-lg shadow-sm p-4">
+        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            Próximos Vencimientos
+        </h3>
+        <div class="space-y-2">
+            {% for ob in obligaciones[:5] if not ob.vencida and not ob.alerta %}
+            <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                <div>
+                    <span class="text-sm font-medium text-gray-800">{{ ob.nombre }}</span>
+                    <span class="text-xs text-gray-500 block">Form {{ ob.formulario }}</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-sm {% if ob.dias_restantes <= 15 %}text-yellow-600{% else %}text-gray-600{% endif %}">
+                        {{ ob.dias_restantes }} días
+                    </span>
+                    <span class="text-xs text-gray-400 block">{{ ob.fecha_limite }}</span>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-500 text-center py-2">No hay más vencimientos próximos</p>
+            {% endfor %}
+        </div>
+        <a href="/dashboard/impuestos" class="mt-3 block text-center text-sm text-ecu-blue hover:underline">
+            Ver calendario completo →
+        </a>
+    </div>
+</div>
+
+<!-- KPIs Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
+    <!-- Clientes -->
+    <div class="card">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="stat-label">Clientes Activos</p>
+                <p class="stat-value text-blue-600">{{ clientes.total }}</p>
+            </div>
+            <div class="bg-blue-100 p-3 rounded-full">
+                <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                    </path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liquidez -->
+    <div class="card">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="stat-label">Liquidez Corriente</p>
+                <p class="stat-value {% if ratios.liquidez >= 1 %}text-green-600{% else %}text-red-600{% endif %}">
+                    {{ "%.2f"|format(ratios.liquidez) }}
+                </p>
+                <p class="text-xs text-gray-400 mt-1">Cap. Trabajo: ${{ "%.2f"|format(ratios.capital_trabajo) }}
+                </p>
+            </div>
+            <div class="{% if ratios.liquidez >= 1 %}bg-green-100{% else %}bg-red-100{% endif %} p-3 rounded-full">
+                <svg class="w-8 h-8 {% if ratios.liquidez >= 1 %}text-green-600{% else %}text-red-600{% endif %}"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ingresos -->
+    <div class="card">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="stat-label">Ingresos del Mes</p>
+                <p class="stat-value text-green-600">${{ "%.2f"|format(resultados.ingresos) }}</p>
+            </div>
+            <div class="bg-green-100 p-3 rounded-full">
+                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                    </path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gastos -->
+    <div class="card">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="stat-label">Gastos del Mes</p>
+                <p class="stat-value text-red-600">${{ "%.2f"|format(resultados.gastos) }}</p>
+            </div>
+            <div class="bg-red-100 p-3 rounded-full">
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Utilidad -->
+    <div class="card">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="stat-label">{% if resultados.es_utilidad %}Utilidad{% else %}Perdida{% endif %}</p>
+                <p class="stat-value {% if resultados.es_utilidad %}text-blue-600{% else %}text-red-600{% endif %}">
+                    ${{ "%.2f"|format(resultados.utilidad|abs) }}
+                </p>
+            </div>
+            <div class="{% if resultados.es_utilidad %}bg-blue-100{% else %}bg-red-100{% endif %} p-3 rounded-full">
+                <svg class="w-8 h-8 {% if resultados.es_utilidad %}text-blue-600{% else %}text-red-600{% endif %}"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                    </path>
+                </svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Movimientos Bancarios del Mes -->
+<div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2 flex items-center">
+        <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+        </svg>
+        Movimientos Bancarios del Mes
+        <span class="ml-2 text-sm font-normal text-gray-500">({{ banco.num_movimientos }} movimientos)</span>
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Entradas/Depositos -->
+        <div class="bg-green-50 rounded-lg p-4 text-center">
+            <div class="flex items-center justify-center mb-2">
+                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"></path>
+                </svg>
+            </div>
+            <p class="text-sm text-green-700 font-medium">Depositos Recibidos</p>
+            <p class="text-2xl font-bold text-green-600">${{ "%.2f"|format(banco.entradas) }}</p>
+        </div>
+        <!-- Salidas/Transferencias -->
+        <div class="bg-red-50 rounded-lg p-4 text-center">
+            <div class="flex items-center justify-center mb-2">
+                <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"></path>
+                </svg>
+            </div>
+            <p class="text-sm text-red-700 font-medium">Transferencias/Liquidaciones</p>
+            <p class="text-2xl font-bold text-red-600">${{ "%.2f"|format(banco.salidas) }}</p>
+        </div>
+        <!-- Neto -->
+        <div class="{% if banco.neto >= 0 %}bg-blue-50{% else %}bg-orange-50{% endif %} rounded-lg p-4 text-center">
+            <div class="flex items-center justify-center mb-2">
+                <svg class="w-8 h-8 {% if banco.neto >= 0 %}text-blue-500{% else %}text-orange-500{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+            </div>
+            <p class="text-sm {% if banco.neto >= 0 %}text-blue-700{% else %}text-orange-700{% endif %} font-medium">Movimiento Neto</p>
+            <p class="text-2xl font-bold {% if banco.neto >= 0 %}text-blue-600{% else %}text-orange-600{% endif %}">${{ "%.2f"|format(banco.neto) }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Analisis de Cuentas -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Top Gastos -->
+    <div class="card">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Top 5 Gastos del Mes</h3>
+        <div class="space-y-3">
+            {% for cuenta in top_cuentas.gastos %}
+            <div class="flex justify-between items-center">
+                <span class="text-gray-600 text-sm truncate max-w-[200px]" title="{{ cuenta.nombre }}">{{
+                    cuenta.nombre }}</span>
+                <div class="flex items-center">
+                    <div class="w-24 h-2 bg-gray-200 rounded-full mr-2 overflow-hidden">
+                        <div class="h-full bg-red-500"
+                            style="width: {{ (cuenta.saldo / resultados.gastos * 100) if resultados.gastos > 0 else 0 }}%">
+                        </div>
+                    </div>
+                    <span class="font-semibold text-sm">${{ "%.2f"|format(cuenta.saldo) }}</span>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-gray-500 text-sm text-center py-4">No hay gastos registrados</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Top Ingresos -->
+    <div class="card">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Top 5 Fuentes de Ingreso</h3>
+        <div class="space-y-3">
+            {% for cuenta in top_cuentas.ingresos %}
+            <div class="flex justify-between items-center">
+                <span class="text-gray-600 text-sm truncate max-w-[200px]" title="{{ cuenta.nombre }}">{{
+                    cuenta.nombre }}</span>
+                <div class="flex items-center">
+                    <div class="w-24 h-2 bg-gray-200 rounded-full mr-2 overflow-hidden">
+                        <div class="h-full bg-green-500"
+                            style="width: {{ (cuenta.saldo / resultados.ingresos * 100) if resultados.ingresos > 0 else 0 }}%">
+                        </div>
+                    </div>
+                    <span class="font-semibold text-sm">${{ "%.2f"|format(cuenta.saldo) }}</span>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-gray-500 text-center text-sm py-4">No hay ingresos registrados</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Secciones Detalladas -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Balance General -->
+    <div class="card">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Balance General</h3>
+        <div class="space-y-3">
+            <div class="flex justify-between">
+                <span class="text-gray-600">Activos</span>
+                <span class="font-semibold text-green-600">${{ "%.2f"|format(balance.activos) }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-600">Pasivos</span>
+                <span class="font-semibold text-red-600">${{ "%.2f"|format(balance.pasivos) }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-600">Patrimonio</span>
+                <span class="font-semibold text-blue-600">${{ "%.2f"|format(balance.patrimonio) }}</span>
+            </div>
+            <div class="border-t pt-2 flex justify-between">
+                <span class="font-medium">Estado</span>
+                {% if balance.cuadrado %}
+                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">CUADRADO</span>
+                {% else %}
+                <span class="bg-red-100 text-red-800 px-2 py-1 rounded text-sm">DESCUADRADO</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- IVA Detalle -->
+    <div class="card">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">IVA - Formulario 2011</h3>
+        <div class="space-y-3">
+            <div class="flex justify-between">
+                <span class="text-gray-600">Ventas Gravadas (15%)</span>
+                <span class="font-semibold">${{ "%.2f"|format(iva.ventas_gravadas) }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-600">Ventas Tarifa 0%</span>
+                <span class="font-semibold">${{ "%.2f"|format(iva.ventas_0) }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-600">IVA en Ventas</span>
+                <span class="font-semibold text-red-600">${{ "%.2f"|format(iva.iva_ventas) }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-600">(-) IVA en Compras</span>
+                <span class="font-semibold text-green-600">${{ "%.2f"|format(iva.iva_compras) }}</span>
+            </div>
+            <div class="border-t pt-2 flex justify-between">
+                <span class="font-medium">IVA a Pagar</span>
+                <span class="font-bold text-lg {% if iva.a_pagar > 0 %}text-ecu-red{% endif %}">
+                    ${{ "%.2f"|format(iva.a_pagar) }}
+                </span>
+            </div>
+            {% if iva.credito_proximo > 0 %}
+            <div class="flex justify-between text-sm">
+                <span class="text-gray-500">Credito Tributario Prox. Mes</span>
+                <span class="text-green-600">${{ "%.2f"|format(iva.credito_proximo) }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Transacciones y Contabilidad Detallada -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Ultimas Transacciones -->
+    <div class="card">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Ultimas Transacciones Bancarias</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50">
+                        <th class="px-2 py-2 text-left text-gray-500">Fecha</th>
+                        <th class="px-2 py-2 text-left text-gray-500">Descripcion</th>
+                        <th class="px-2 py-2 text-right text-gray-500">Monto</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for tx in transacciones.recientes %}
+                    <tr>
+                        <td class="px-2 py-2 whitespace-nowrap">{{ tx.fecha }}</td>
+                        <td class="px-2 py-2">
+                            <div class="font-medium text-gray-900">{{ tx.contraparte_nombre or
+                                tx.descripcion_original or 'Sin descripcion' }}</div>
+                            <div class="text-xs text-gray-500 truncate max-w-[200px]">{{ tx.referencia or '' }}
+                            </div>
+                        </td>
+                        <td
+                            class="px-2 py-2 text-right font-semibold {% if tx.tipo == 'credito' %}text-green-600{% else %}text-red-600{% endif %}">
+                            ${{ "%.2f"|format(tx.monto) }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="px-2 py-4 text-center text-gray-500">No hay transacciones
+                            recientes</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <!-- Resumen Flujo -->
+        <div class="mt-4 pt-4 border-t grid grid-cols-3 gap-2 text-center text-sm">
+            <div>
+                <span class="block text-gray-500">Creditos</span>
+                <span class="font-semibold text-green-600">${{ "%.2f"|format(transacciones.creditos) }}</span>
+            </div>
+            <div>
+                <span class="block text-gray-500">Debitos</span>
+                <span class="font-semibold text-red-600">${{ "%.2f"|format(transacciones.debitos) }}</span>
+            </div>
+            <div>
+                <span class="block text-gray-500">Neto</span>
+                <span class="font-bold {% if transacciones.neto >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                    ${{ "%.2f"|format(transacciones.neto) }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ultimos Asientos Contables -->
+    <div class="card">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Ultimos Asientos Contables</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50">
+                        <th class="px-2 py-2 text-left text-gray-500">Fecha</th>
+                        <th class="px-2 py-2 text-left text-gray-500">Concepto</th>
+                        <th class="px-2 py-2 text-right text-gray-500">Total</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for asiento in contabilidad.asientos_recientes %}
+                    <tr>
+                        <td class="px-2 py-2 whitespace-nowrap">{{ asiento.fecha }}</td>
+                        <td class="px-2 py-2">
+                            <div class="font-medium text-gray-900">{{ asiento.concepto }}</div>
+                            <div class="text-xs text-gray-500">#{{ asiento.numero_asiento }}</div>
+                        </td>
+                        <td class="px-2 py-2 text-right font-semibold">
+                            ${{ "%.2f"|format(asiento.total_debe) }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="px-2 py-4 text-center text-gray-500">No hay asientos recientes
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <!-- Resumen Facturacion -->
+        <div class="mt-4 pt-4 border-t">
+            <h4 class="text-sm font-semibold text-gray-700 mb-2">Resumen Facturacion</h4>
+            <div class="grid grid-cols-3 gap-2 text-center text-sm">
+                <div>
+                    <span class="block text-gray-500">Emitidas</span>
+                    <span class="font-semibold">{{ facturacion.emitidas }}</span>
+                </div>
+                <div>
+                    <span class="block text-gray-500">Anuladas</span>
+                    <span class="font-semibold text-gray-400">{{ facturacion.anuladas }}</span>
+                </div>
+                <div>
+                    <span class="block text-gray-500">Total</span>
+                    <span class="font-bold text-ecu-blue">${{ "%.2f"|format(facturacion.total) }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
