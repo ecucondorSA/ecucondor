@@ -3,12 +3,13 @@ ECUCONDOR - Router Principal API v1
 Agrupa todos los routers de la API.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from src.api.v1 import clientes, compras, honorarios, invoices, ledger, sri, transactions
+from src.auth.dependencies import verify_api_key
 
-# Router principal de la API v1
-router = APIRouter()
+# Router principal de la API v1 - todos los endpoints requieren API Key
+router = APIRouter(dependencies=[Depends(verify_api_key)])
 
 # Incluir routers de cada módulo
 router.include_router(

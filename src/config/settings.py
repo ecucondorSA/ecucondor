@@ -102,6 +102,12 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     email_from: str | None = None
 
+    # ===== AUTENTICACIÓN API =====
+    auth_enabled: bool = Field(default=True, description="Habilitar autenticación API Key")
+    api_key_secret: str = Field(
+        default="", description="API Key para acceso a la API (mínimo 32 caracteres en producción)"
+    )
+
     # ===== LOGGING =====
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     log_format: Literal["json", "console"] = "json"

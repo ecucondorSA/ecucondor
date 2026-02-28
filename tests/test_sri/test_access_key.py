@@ -21,8 +21,9 @@ class TestCalcularDigitoVerificador:
 
     def test_calculo_basico(self):
         """Verifica el cálculo del dígito verificador."""
-        # Cadena de prueba conocida
-        cadena = "150320240117925350010010010000000011234567801"
+        # Cadena de prueba de 48 dígitos (clave sin dígito verificador)
+        # Estructura: fecha(8) + tipo(2) + ruc(13) + amb(1) + est(3) + pto(3) + sec(9) + cod(8) + emi(1)
+        cadena = "150320240117925355000011001001000000001123456781"
         digito = calcular_digito_verificador(cadena)
         assert digito.isdigit()
         assert len(digito) == 1

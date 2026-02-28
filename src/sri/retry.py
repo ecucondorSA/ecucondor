@@ -322,6 +322,17 @@ def classify_sri_error(error_code: str, error_message: str) -> Exception:
     # Errores de validación (no reintentables)
     validation_errors = ["35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45"]
 
+    # Mensajes de diagnóstico para errores comunes
+    diagnostics = {
+        "39": (
+            "FIRMA INVALIDA - Verificar: (1) certificado .p12 registrado en "
+            "srienlinea.sri.gob.ec > Facturación Electrónica, "
+            "(2) certificado vigente, (3) RUC del emisor coincide con el del certificado"
+        ),
+        "35": "CLAVE DE ACCESO EN PROCESAMIENTO - El comprobante ya fue recibido, consultar autorización",
+        "43": "CLAVE DE ACCESO REGISTRADA - El comprobante ya fue autorizado previamente",
+    }
+
     if error_code in connection_errors:
         return SRIConnectionError(f"Error de conexión SRI [{error_code}]: {error_message}")
 
@@ -332,7 +343,8 @@ def classify_sri_error(error_code: str, error_message: str) -> Exception:
         return SRIServiceUnavailable(f"Servicio no disponible [{error_code}]: {error_message}")
 
     if error_code in validation_errors:
-        return SRIValidationError(f"Error de validación [{error_code}]: {error_message}")
+        detail = diagnostics.get(error_code, error_message)
+        return SRIValidationError(f"Error de validación [{error_code}]: {detail}")
 
     # Por defecto, tratar como error de validación (no reintentar)
     return SRIValidationError(f"Error SRI [{error_code}]: {error_message}")
