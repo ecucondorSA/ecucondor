@@ -1,12 +1,14 @@
 """
 ECUCONDOR - Constructor de XML para ATS (Anexo Transaccional Simplificado)
 Genera el archivo XML según especificaciones del SRI Ecuador.
+Incluye validación automática contra el XSD oficial.
 """
 
 from lxml import etree
 from decimal import Decimal
 from typing import List
-from .models import ATS, DetalleVenta, DetalleAnulado, DetalleCompra, PagoExterior
+from .models import ATS, DetalleVenta, DetalleAnulado, DetalleCompra, PagoExterior, VentaEstablecimiento
+from .validator import validar_xml
 
 
 class ATSBuilder:
@@ -14,73 +16,81 @@ class ATSBuilder:
     Constructor de archivos XML para el Anexo Transaccional Simplificado.
 
     Genera XML válido según la ficha técnica del SRI para ser subido
-    al portal de declaraciones.
+    al portal de declaraciones. Incluye validación XSD automática.
     """
 
-    def build(self, ats: ATS) -> str:
+    def build(self, ats: ATS, validar: bool = True) -> str:
         """
-        Construye el XML del ATS.
+        Construye el XML del ATS y lo valida contra el XSD oficial.
 
         Args:
             ats: Modelo ATS con todos los datos del período
+            validar: Si True, valida contra XSD antes de retornar (default: True)
 
         Returns:
             String con el XML completo
+
+        Raises:
+            ValueError: Si el XML no pasa validación XSD
         """
+        # Auto-generar ventasEstablecimiento si no fue proporcionado
+        if not ats.ventas_establecimiento:
+            total_ventas = ats.calcular_total_ventas()
+            ats.ventas_establecimiento = [
+                VentaEstablecimiento(cod_estab=ats.num_estab_ruc or "001", ventas_estab=total_ventas)
+            ]
+
         # Elemento raíz
         root = etree.Element("iva")
 
         # Cabecera - Identificación del informante (obligatoria)
         self._add_element(root, "TipoIDInformante", ats.tipo_id_informante)
         self._add_element(root, "IdInformante", ats.id_informante)
-        self._add_element(root, "razonSocial", self._limpiar_texto(ats.razon_social))
+        self._add_element(root, "razonSocial", ats.razon_social)
         self._add_element(root, "Anio", str(ats.anio))
         self._add_element(root, "Mes", f"{ats.mes:02d}")
 
-        # numEstabRuc (opcional, antes de totalVentas según XSD)
+        # Orden estricto según XSD (xsd:sequence):
+        # numEstabRuc → totalVentas → codigoOperativo → compras → ventas
+        # → ventasEstablecimiento → anulados
+
         if ats.num_estab_ruc:
             self._add_element(root, "numEstabRuc", ats.num_estab_ruc)
 
-        # Total de ventas (opcional según XSD pero siempre lo incluimos)
         if hasattr(ats, 'total_ventas') and ats.total_ventas is not None:
             total_ventas = ats.total_ventas
         else:
             total_ventas = ats.calcular_total_ventas() if ats.ventas else Decimal("0.00")
-        self._add_element(root, "totalVentas", self._decimal_str(total_ventas))
 
-        # Código operativo (REQUERIDO según XSD, va después de totalVentas)
+        self._add_element(root, "totalVentas", self._decimal_str(total_ventas))
         self._add_element(root, "codigoOperativo", ats.codigo_operativo)
 
-        # Nota: totalCompras NO existe en el XSD del ATS del SRI
-
-        # Secciones en orden del XSD: compras → ventas → ventasEstablecimiento
         if ats.compras:
             self._add_compras(root, ats.compras)
 
         if ats.ventas:
             self._add_ventas(root, ats.ventas)
 
-        if ats.ventas_establecimiento:
-            for ve in ats.ventas_establecimiento:
-                self._add_ventas_establecimiento(root, ve.cod_estab, ve.ventas_estab)
+        for ve in ats.ventas_establecimiento:
+            self._add_ventas_establecimiento(root, ve.cod_estab, ve.ventas_estab)
 
-        # Generar XML con encoding ISO-8859-1 (requerido por XSD del SRI)
-        xml_bytes = etree.tostring(
-            root,
-            encoding="ISO-8859-1",
-            xml_declaration=True,
-            standalone=False,
-            pretty_print=False
-        )
-        xml_str = xml_bytes.decode("iso-8859-1")
+        if ats.anulados:
+            self._add_anulados(root, ats.anulados)
 
-        # Post-procesar para formato exacto del SRI
-        xml_str = xml_str.replace("<?xml version='1.0' encoding='ISO-8859-1'?>",
-                                  '<?xml version="1.0" encoding="ISO-8859-1"?>')
-        xml_str = xml_str.replace("standalone='no'", 'standalone="no"')
-        xml_str = xml_str.replace("?>\n<", "?><")
+        # Generar XML con declaración ISO-8859-1 (requerido por SRI)
+        xml_bytes = etree.tostring(root, encoding="unicode", pretty_print=False)
+        xml_str = '<?xml version="1.0" encoding="ISO-8859-1"?>' + xml_bytes + "\n"
 
-        return xml_str + "\n"
+        # Validar contra XSD oficial del SRI
+        if validar:
+            valido, errores = validar_xml(xml_str)
+            if not valido:
+                raise ValueError(
+                    f"ATS XML no pasa validación XSD del SRI:\n" +
+                    "\n".join(f"  - {e}" for e in errores)
+                )
+
+        return xml_str
 
     def _add_compras(self, root: etree.Element, compras: List[DetalleCompra]) -> None:
         """Agrega la sección de compras al XML."""
@@ -230,13 +240,7 @@ class ATSBuilder:
         return f"{value:.2f}"
 
     def _limpiar_texto(self, texto: str) -> str:
-        """Limpia caracteres especiales del texto para XML."""
+        """Limita longitud del texto. lxml escapa caracteres XML automáticamente."""
         if not texto:
             return ""
-        # Reemplazar caracteres problemáticos
-        texto = texto.replace("&", "&amp;")
-        texto = texto.replace("<", "&lt;")
-        texto = texto.replace(">", "&gt;")
-        texto = texto.replace('"', "&quot;")
-        texto = texto.replace("'", "&apos;")
-        return texto[:300]  # Limitar longitud
+        return texto[:300]

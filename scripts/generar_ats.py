@@ -39,6 +39,7 @@ from src.sri.ats.models import (
     ATS,
     DetalleVenta,
     DetalleAnulado,
+    VentaEstablecimiento,
     TipoIdentificacionATS,
     TipoComprobanteATS,
 )
@@ -213,6 +214,15 @@ def main(anio: int, mes: int):
         ventas=detalles_ventas,
         anulados=detalles_anulados,
     )
+
+    # Agregar ventasEstablecimiento (requerido por SRI)
+    total_ventas = ats.calcular_total_ventas()
+    ats.ventas_establecimiento = [
+        VentaEstablecimiento(
+            cod_estab="001",
+            ventas_estab=total_ventas,
+        )
+    ]
 
     # Generar XML
     builder = ATSBuilder()

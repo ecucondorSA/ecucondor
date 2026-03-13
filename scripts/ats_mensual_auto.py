@@ -31,7 +31,7 @@ for key, value in env_values.items():
 
 from supabase import create_client
 from src.sri.ats.models import (
-    ATS, DetalleVenta, DetalleAnulado,
+    ATS, DetalleVenta, DetalleAnulado, VentaEstablecimiento,
     TipoIdentificacionATS, TipoComprobanteATS,
 )
 from src.sri.ats.builder import ATSBuilder
@@ -146,6 +146,12 @@ def generar_ats(anio: int, mes: int) -> Path:
         ventas=detalles_ventas, anulados=detalles_anulados,
     )
 
+    # Agregar ventasEstablecimiento (requerido por SRI)
+    total_ventas = ats.calcular_total_ventas()
+    ats.ventas_establecimiento = [
+        VentaEstablecimiento(cod_estab="001", ventas_estab=total_ventas)
+    ]
+
     builder = ATSBuilder()
     xml_content = builder.build(ats)
 
@@ -156,7 +162,7 @@ def generar_ats(anio: int, mes: int) -> Path:
     xml_file = output_dir / f"{nombre}.xml"
     zip_file = output_dir / f"{nombre}.zip"
 
-    with open(xml_file, "w", encoding="iso-8859-1") as f:
+    with open(xml_file, "w", encoding="utf-8") as f:
         f.write(xml_content)
 
     with zipfile.ZipFile(zip_file, "w", zipfile.ZIP_DEFLATED) as zf:

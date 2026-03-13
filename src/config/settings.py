@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     sri_agente_retencion: str | None = None
     sri_rimpe: Literal["SI", "NO"] = "NO"
 
+    # Clave SRI en línea (para declaraciones)
+    sri_password: str = Field(default="", description="Clave SRI Online")
+
     # Establecimiento y punto de emisión
     sri_establecimiento: str = Field(default="001", min_length=3, max_length=3)
     sri_punto_emision: str = Field(default="001", min_length=3, max_length=3)
