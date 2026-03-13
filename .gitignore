@@ -103,3 +103,10 @@ node_modules/
 output/
 reportes/
 input/
+
+# ===== LEGAL Y PRIVADO =====
+legal/
+aumento_capital_150k/
+*_CONTABILIDAD.md
+*.resolved
+
