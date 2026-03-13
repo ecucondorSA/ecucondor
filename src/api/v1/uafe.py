@@ -10,7 +10,7 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from src.api.v1.deps import get_supabase
+from src.db.supabase import get_supabase_client as get_supabase
 from src.uafe.detector import RoiiDetector
 from src.uafe.models import DeteccionRoii, MonitoreoResu, ReporteUafe, UafeParametros
 from src.uafe.reporter import UafeReporter
